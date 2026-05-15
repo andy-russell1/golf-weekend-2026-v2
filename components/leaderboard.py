@@ -5,7 +5,14 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from components.layout import render_metric_card, render_momentum_strip, render_section_header, render_status_card
+from components.layout import (
+    render_chip_row,
+    render_metric_card,
+    render_momentum_strip,
+    render_placeholder_panel,
+    render_section_header,
+    render_status_card,
+)
 from domain.formatting import format_points, format_score_value
 from domain.scoring import compute_optional_awards
 
@@ -16,6 +23,85 @@ def _format_total_table(df: pd.DataFrame) -> pd.DataFrame:
         if column in formatted.columns:
             formatted[column] = formatted[column].apply(format_score_value)
     return formatted
+
+
+def _next_pending_hole(summary: pd.DataFrame, result_column: str = "hole_result") -> int | None:
+    if result_column not in summary.columns:
+        return None
+    pending = summary[summary[result_column].eq("Pending")]
+    if pending.empty:
+        return None
+    return int(pending.iloc[0]["hole"])
+
+
+def _match_leader_text(balance: int, left_label: str, right_label: str) -> tuple[str, str]:
+    if balance > 0:
+        return f"{left_label} are {abs(balance)} up", "red"
+    if balance < 0:
+        return f"{right_label} are {abs(balance)} up", "blue"
+    return "Match all square", "neutral"
+
+
+def _render_live_answer(result: dict[str, Any]) -> None:
+    st.markdown("#### Live Answer")
+
+    if result["format_name"] == "Singles":
+        matches = result.get("matches", [])
+        if not matches:
+            return
+        columns = st.columns(len(matches))
+        for column, match in zip(columns, matches):
+            next_hole = _next_pending_hole(match["summary_df"])
+            status, tone = _match_leader_text(match["current_balance"], match["players"][0], match["players"][1])
+            support = "Result complete" if match["is_complete"] else f"Hole {next_hole} is next" if next_hole else "Awaiting next saved hole"
+            with column:
+                render_status_card(match["label"], status, support, tone=tone)
+        return
+
+    if result["format_name"] == "Stroke Play":
+        stroke_play = result.get("stroke_play", {})
+        red_total = int(stroke_play.get("red_total", 0))
+        blue_total = int(stroke_play.get("blue_total", 0))
+        next_hole = _next_pending_hole(result["summary_df"])
+        if red_total < blue_total:
+            status, tone = f"Red lead by {blue_total - red_total} net shots", "red"
+        elif blue_total < red_total:
+            status, tone = f"Blue lead by {red_total - blue_total} net shots", "blue"
+        else:
+            status, tone = "Round all square on net better ball", "neutral"
+        support = "Round complete" if result.get("is_complete") else f"Hole {next_hole} is the next counting swing" if next_hole else "Awaiting next saved hole"
+        render_status_card("Stroke Play", status, support, tone=tone)
+        return
+
+    if result["format_name"] == "Skins":
+        skins = result.get("skins", {})
+        red_skins = int(skins.get("red_skins", 0))
+        blue_skins = int(skins.get("blue_skins", 0))
+        carryover = int(skins.get("carryover_skins", 1))
+        next_hole = _next_pending_hole(result["summary_df"])
+        if red_skins > blue_skins:
+            status, tone = f"Red lead by {red_skins - blue_skins} skins", "red"
+        elif blue_skins > red_skins:
+            status, tone = f"Blue lead by {blue_skins - red_skins} skins", "blue"
+        else:
+            status, tone = "Skins all square", "neutral"
+        if result.get("is_complete"):
+            support = "Round complete"
+        elif next_hole:
+            support = f"Hole {next_hole} is next for {carryover} skin{'s' if carryover != 1 else ''}"
+        else:
+            support = "Awaiting next saved hole"
+        render_status_card("Skins", status, support, tone=tone)
+        return
+
+    match = result.get("match")
+    if not match:
+        return
+    left_label, right_label = match["label"].split(" vs ")
+    next_hole = _next_pending_hole(match["summary_df"])
+    status, tone = _match_leader_text(match["current_balance"], left_label, right_label)
+    support = "Result complete" if match["is_complete"] else f"Hole {next_hole} is next" if next_hole else "Awaiting next saved hole"
+    render_status_card("4-Ball", status, support, tone=tone)
 
 
 def _render_points_cards(result: dict[str, Any]) -> None:
@@ -32,6 +118,38 @@ def _render_points_cards(result: dict[str, Any]) -> None:
         render_metric_card("Blue Live", format_points(float(projected["blue"])), "if it ended now", tone="blue")
 
 
+def render_match_centre_empty_state(
+    selected_fixture: dict[str, Any],
+    format_name: str,
+    tee_label: str,
+    round_focus: dict[str, Any],
+) -> None:
+    render_status_card(
+        "Match Centre",
+        "Waiting for the first saved hole",
+        "Momentum, running totals, and points impact appear after Live Scoring saves hole 1.",
+        tone="gold",
+    )
+    render_chip_row(
+        [
+            selected_fixture["title"],
+            format_name,
+            f"{tee_label} tees",
+            round_focus["progress_text"],
+        ],
+        tone="accent",
+    )
+    action_columns = st.columns(2)
+    with action_columns[0]:
+        st.page_link("pages/2_Live_Scoring.py", label=round_focus["primary_label"], width="stretch")
+    with action_columns[1]:
+        st.page_link("pages/4_Course_Guide.py", label="Open course guide", width="stretch")
+    render_placeholder_panel(
+        "No live scoring saved yet",
+        "Use Live Scoring for the selected round. Save the first hole to unlock hole-by-hole results, match status, and weekend points impact here.",
+    )
+
+
 def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_header: bool = True) -> None:
     if show_header:
         render_section_header(
@@ -44,6 +162,7 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
         st.info("Enter live scores to populate the match centre.")
         return
 
+    _render_live_answer(result)
     _render_points_cards(result)
 
     if result["format_name"] == "Singles":

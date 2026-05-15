@@ -5,7 +5,7 @@ import streamlit as st
 from components.hole_explorer import render_hole_explorer
 from components.layout import render_chip_row, render_section_header
 from components.overview import render_course_briefing, render_course_scorecard, render_playing_handicap_summary
-from support.app_context import build_page_context, initialize_page, render_page_links, render_shared_sidebar
+from support.app_context import build_page_context, initialize_page, render_shared_sidebar
 from support.session import set_active_hole
 
 
@@ -17,9 +17,8 @@ def main() -> None:
     context = build_page_context(store)
     render_section_header(
         "Course Guide",
-        "Venue briefing, hole explorer, yardages, and live shot allocation support stay together on this page.",
+        "Venue briefing, hole explorer, yardages, and live shot allocation support stay together here, even when hole imagery is missing.",
     )
-    render_page_links("Course Guide")
     render_chip_row(
         [
             context["selected_fixture"]["title"],

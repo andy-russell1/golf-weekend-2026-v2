@@ -29,19 +29,25 @@ def render_course_briefing(
         return
 
     render_chip_row([course_title, format_name, f"{tee_label} tees"])
+    dash = "\u2014"
 
-    metric_columns = st.columns(5)
+    metric_columns = st.columns(3)
     selected_yard_total_key = "yards_white_total" if tee_label.lower() == "white" else "yards_yellow_total"
     metrics = [
-        ("Total Par", summary.get("par_total", "\u2014"), None),
-        (f"{tee_label} Total", summary.get(selected_yard_total_key, "\u2014"), "yards"),
-        ("Front 9", summary.get("par_out", "\u2014"), "par"),
-        ("Back 9", summary.get("par_in", "\u2014"), "par"),
+        ("Total Par", summary.get("par_total", dash), None),
+        (f"{tee_label} Total", summary.get(selected_yard_total_key, dash), "yards"),
         ("Format", format_name, None),
     ]
     for column, (label, value, supporting) in zip(metric_columns, metrics):
         with column:
             render_metric_card(label, value, supporting)
+    render_chip_row(
+        [
+            f"Front 9 par {summary.get('par_out', dash)}",
+            f"Back 9 par {summary.get('par_in', dash)}",
+        ],
+        tone="accent",
+    )
 
 
 def render_playing_handicap_summary(
@@ -76,11 +82,12 @@ def render_playing_handicap_summary(
     display = player_rows.copy()
     display["Handicap Index"] = display["Handicap Index"].apply(format_handicap_index)
     display["Allowance"] = display["Allowance"].apply(lambda value: f"{int(float(value) * 100)}%")
-    st.dataframe(
-        display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
-        width="stretch",
-        hide_index=True,
-    )
+    with st.expander("Detailed handicap table", expanded=False):
+        st.dataframe(
+            display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
+            width="stretch",
+            hide_index=True,
+        )
 
 
 def render_course_scorecard(course: str, tee_label: str) -> None:
@@ -95,12 +102,13 @@ def render_course_scorecard(course: str, tee_label: str) -> None:
     preview = preview.rename(
         columns={
             "hole": "Hole",
+            "par": "Par",
             selected_yardage_column: selected_yard_label,
             "si": "SI",
         }
     )
     st.markdown("#### Scorecard")
-    st.dataframe(preview[["Hole", selected_yard_label, "SI"]], width="stretch", hide_index=True)
+    st.dataframe(preview[["Hole", "Par", selected_yard_label, "SI"]], width="stretch", hide_index=True)
 
 
 def render_course_overview(

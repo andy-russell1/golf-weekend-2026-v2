@@ -90,20 +90,21 @@ def render_setup_admin(
                 st.rerun()
 
     with setup_tab:
+        st.caption("These settings drive Live Scoring, Match Centre, and the course guide for the selected fixture.")
         control_columns = st.columns(2)
         with control_columns[0]:
             updated_format = st.selectbox(
-                "Format",
+                "Round format",
                 options=list(FORMAT_OPTIONS),
                 index=list(FORMAT_OPTIONS).index(format_name),
             )
             updated_tee = st.radio(
-                "Tee",
+                "Tee used for scoring",
                 options=list(TEE_OPTIONS),
                 index=list(TEE_OPTIONS).index(tee_label),
                 horizontal=True,
             )
-            updated_allowance = st.slider("Allowance %", min_value=0, max_value=100, value=allowance_percent, step=5)
+            updated_allowance = st.slider("Handicap allowance %", min_value=0, max_value=100, value=allowance_percent, step=5)
 
         with control_columns[1]:
             show_gross_secondary_value = st.toggle("Show Gross Best Ball In Match Centre", value=show_gross_secondary)
@@ -153,6 +154,7 @@ def render_setup_admin(
             )
 
     with players_tab:
+        st.caption("Keep labels explicit here so names and playing handicaps stay readable on a phone during the round.")
         render_player_handicap_editor(players_rows=players_rows, round_runtime=round_runtime, tee_rating=tee_rating)
         render_round_summary_metrics(format_name=format_name, round_state=round_state)
 
@@ -162,6 +164,13 @@ def render_setup_admin(
             persistence["mode"].capitalize(),
             "Google Sheets is preferred; local session fallback remains available if the workbook is not connected.",
         )
-        if st.button("Reset Selected Round", width="stretch"):
+        st.warning("Resetting a round clears all saved scores and recalculated results for the selected fixture only.")
+        confirm_reset = st.checkbox(f"I understand this will clear {selected_fixture['title']}.")
+        confirmation_text = st.text_input("Type RESET to enable round reset", placeholder="RESET")
+        if st.button(
+            "Reset Selected Round",
+            width="stretch",
+            disabled=not (confirm_reset and confirmation_text.strip().upper() == "RESET"),
+        ):
             clear_round(fixture_id)
             st.rerun()

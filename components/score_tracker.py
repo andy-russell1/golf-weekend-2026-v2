@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from components.layout import render_metric_card, render_section_header
+from components.layout import render_metric_card, render_section_header, render_status_card
 from domain.formatting import format_handicap_index
 from domain.handicap import build_player_handicap_table
 from domain.scoring import compute_round_results
@@ -21,34 +21,32 @@ def render_player_handicap_editor(
     ordered_rows = sorted(players_rows, key=lambda row: int(float(row.get("display_order") or 0)))
     editor_rows: list[dict[str, object]] = []
 
-    team_columns = st.columns(2)
-    index = 0
-    for column, team_id in ((team_columns[0], "red"), (team_columns[1], "blue")):
-        with column:
-            st.markdown(f"#### {TEAM_CONFIG[team_id]['name']}")
-            team_players = [row for row in ordered_rows if str(row.get("team_id")) == team_id]
-            for row in team_players:
-                editor_rows.append(
-                    {
-                        **row,
-                        "player_name": st.text_input(
-                            f"{team_id}_{index}_name",
-                            value=str(row.get("player_name", "")),
-                            label_visibility="collapsed",
-                            placeholder="Player name",
-                        ),
-                        "handicap_index": st.number_input(
-                            f"{team_id}_{index}_hi",
-                            min_value=0.0,
-                            max_value=54.0,
-                            step=0.1,
-                            value=float(row.get("handicap_index") or 0.0),
-                            label_visibility="collapsed",
-                        ),
-                    }
-                )
-                st.caption(f"{TEAM_CONFIG[team_id]['name']} player")
-                index += 1
+    st.caption("Edit player names and handicap indexes here. The live preview below updates against the selected tee and allowance.")
+    for team_id in ("red", "blue"):
+        st.markdown(f"#### {TEAM_CONFIG[team_id]['name']}")
+        team_players = [row for row in ordered_rows if str(row.get("team_id")) == team_id]
+        for player_number, row in enumerate(team_players, start=1):
+            st.markdown(f"##### Player {player_number}")
+            editor_rows.append(
+                {
+                    **row,
+                    "player_name": st.text_input(
+                        "Player name",
+                        value=str(row.get("player_name", "")),
+                        key=f"player_name::{team_id}::{player_number}",
+                        placeholder="Player name",
+                    ),
+                    "handicap_index": st.number_input(
+                        "Handicap index",
+                        min_value=0.0,
+                        max_value=54.0,
+                        step=0.1,
+                        value=float(row.get("handicap_index") or 0.0),
+                        key=f"handicap_index::{team_id}::{player_number}",
+                    ),
+                }
+            )
+            st.caption("Used across Live Scoring, Match Centre, and the course guide.")
 
     player_names = [str(row.get("player_name", "")).strip() for row in editor_rows]
     handicap_indexes = [float(row.get("handicap_index") or 0.0) for row in editor_rows]
@@ -67,14 +65,26 @@ def render_player_handicap_editor(
             st.error(str(exc))
 
     if not live_handicaps.empty:
+        st.markdown("#### Playing Handicap Preview")
+        card_columns = st.columns(2)
+        for index, (_, row) in enumerate(live_handicaps.iterrows()):
+            with card_columns[index % 2]:
+                render_status_card(
+                    str(row["Player"]),
+                    f"Playing {int(row['Playing Handicap'])}",
+                    f"HI {format_handicap_index(row['Handicap Index'])} • Course {int(row['Course Handicap'])} • Allowance {int(row['Allowance'] * 100)}%",
+                    tone=str(row["Team Id"]),
+                )
+
         handicap_display = live_handicaps.copy()
         handicap_display["Handicap Index"] = handicap_display["Handicap Index"].apply(format_handicap_index)
         handicap_display["Allowance"] = handicap_display["Allowance"].apply(lambda value: f"{int(value * 100)}%")
-        st.dataframe(
-            handicap_display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
-            width="stretch",
-            hide_index=True,
-        )
+        with st.expander("Detailed handicap table", expanded=False):
+            st.dataframe(
+                handicap_display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
+                width="stretch",
+                hide_index=True,
+            )
     else:
         st.info(f"No tee rating metadata is available for {round_runtime['tee_label']} tees, so WHS handicaps cannot be shown.")
 

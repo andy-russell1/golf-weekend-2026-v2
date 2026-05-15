@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from components.setup_admin import render_setup_admin
-from support.app_context import build_page_context, initialize_page, render_page_links, render_shared_sidebar
+from support.app_context import build_page_context, initialize_page, render_shared_sidebar
 
 
 def main() -> None:
@@ -10,7 +10,6 @@ def main() -> None:
 
     store = render_shared_sidebar()
     context = build_page_context(store)
-    render_page_links("Setup / Admin")
     render_setup_admin(
         selected_fixture=context["selected_fixture"],
         persistence=context["persistence"],

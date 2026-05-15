@@ -29,7 +29,7 @@ def render_hole_explorer(
 
     hole_options = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     default_hole = current_active_hole if current_active_hole in hole_options else hole_options[0]
-    selected_hole = st.selectbox("View hole", options=hole_options, index=hole_options.index(default_hole))
+    selected_hole = st.selectbox("Hole to review", options=hole_options, index=hole_options.index(default_hole))
 
     hole_record = get_hole_record(course, selected_hole)
     image_record = get_hole_image(course, selected_hole)
@@ -41,19 +41,14 @@ def render_hole_explorer(
     alternate_yardage = hole_record.get(alternate_key)
     difficulty, _ = difficulty_label(hole_record.get("si"))
 
-    header_columns = st.columns([1, 0.35])
-    with header_columns[0]:
-        st.markdown(f"### {hole_name}")
-        render_chip_row([f"Par {hole_record.get('par', '—')}", f"SI {hole_record.get('si', '—')}", difficulty])
-    with header_columns[1]:
-        open_live_scoring = st.button("Open In Live Scoring", width="stretch")
+    st.markdown(f"### {hole_name}")
+    render_chip_row([f"Par {hole_record.get('par', '—')}", f"SI {hole_record.get('si', '—')}", difficulty])
+    open_live_scoring = st.button("Open This Hole In Live Scoring", width="stretch")
 
-    metric_columns = st.columns(4)
+    metric_columns = st.columns(2)
     metric_values = [
         ("Selected Tee", selected_yardage if pd.notna(selected_yardage) else "\u2014", "yards"),
         ("Alternate Tee", alternate_yardage if pd.notna(alternate_yardage) else "\u2014", "yards"),
-        ("Par", hole_record.get("par", "\u2014"), None),
-        ("Stroke Index", hole_record.get("si", "\u2014"), None),
     ]
     for column, (label, value, supporting) in zip(metric_columns, metric_values):
         with column:
@@ -71,7 +66,7 @@ def render_hole_explorer(
     content_columns = st.columns([1.35, 1], gap="large")
     with content_columns[0]:
         if image_record["available"]:
-            st.image(str(image_record["path"]), use_column_width=True)
+            st.image(str(image_record["path"]), use_container_width=True)
             if image_record.get("caption"):
                 st.caption(image_record["caption"])
         else:

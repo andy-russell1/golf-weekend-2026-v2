@@ -6,11 +6,11 @@ import pandas as pd
 import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
-from support.data_loader import get_hole_image, get_hole_record
 from domain.formatting import format_hole_name, format_relative_to
-from support.google_sheets import GoogleSheetsError
 from domain.scoring import compute_round_results, get_hole_shots_for_display
-from support.session import TEAM_A_PLAYERS, get_format_config, set_active_hole
+from support.data_loader import get_hole_image, get_hole_record
+from support.google_sheets import GoogleSheetsError
+from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config, set_active_hole
 from support.state_helpers import save_result_payload, save_scores_for_hole
 from domain.weekend_config import build_team_label
 
@@ -40,7 +40,6 @@ def _update_scores(
     format_name: str,
     values: dict[str, object],
     force_pending: bool = False,
-    scoring_mode: str = "net",
 ) -> pd.DataFrame:
     updated = scores.copy()
     mask = updated["hole"] == hole
@@ -51,13 +50,8 @@ def _update_scores(
                 updated.loc[mask, column] = pd.NA
         return updated
 
-    required_keys = [
-        key
-        for key, value in values.items()
-        if key.startswith("player_") and value not in (None, "", "—")
-    ]
-    required_count = len(required_keys)
-    updated.loc[mask, "status"] = _status_for_values(list(values.values()), required_count=required_count)
+    player_values = [value for key, value in values.items() if key.startswith("player_")]
+    updated.loc[mask, "status"] = _status_for_values(player_values, required_count=len(player_values))
     for column, value in values.items():
         updated.loc[mask, column] = _coerce_score(value)
     numeric_columns = [column for column in updated.columns if column.startswith("player_")]
@@ -127,6 +121,18 @@ def _hole_preview(result: dict[str, Any], format_name: str, hole: int) -> list[d
     ]
 
 
+def _persist_live_scores(
+    round_runtime: dict[str, Any],
+    updated_scores: pd.DataFrame,
+    round_state: dict[str, Any],
+    hole: int,
+    result_payload: dict[str, Any],
+) -> None:
+    save_scores_for_hole(round_runtime, hole, updated_scores, round_state)
+    if result_payload:
+        save_result_payload(round_runtime["round_id"], result_payload)
+
+
 def render_live_scoring(
     course_df: pd.DataFrame,
     course: str,
@@ -138,6 +144,9 @@ def render_live_scoring(
 ) -> dict[str, Any]:
     format_name = round_runtime["format_name"]
     allowance_percent = round_runtime["allowance_percent"]
+    scoring_mode = str(round_runtime.get("scoring_mode") or "net")
+    scramble_mode = str(round_runtime.get("scramble_mode") or "")
+    stableford_mode = str(round_runtime.get("stableford_mode") or "")
     player_names = list(round_state["player_names"])
     handicap_indexes = list(round_state["handicap_indexes"])
     player_ids = list(round_state["player_ids"])
@@ -154,21 +163,23 @@ def render_live_scoring(
         active_hole = holes[0]
         set_active_hole(round_runtime["round_id"], active_hole)
 
-    nav_columns = st.columns([0.8, 1.4, 0.8, 1.2])
+    nav_columns = st.columns(2)
     with nav_columns[0]:
         if st.button("Previous", width="stretch", disabled=active_hole == holes[0]):
             set_active_hole(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)])
             st.rerun()
     with nav_columns[1]:
-        selected_hole = st.selectbox("Jump To Hole", options=holes, index=holes.index(active_hole), label_visibility="collapsed")
-        if selected_hole != active_hole:
-            set_active_hole(round_runtime["round_id"], int(selected_hole))
-            active_hole = int(selected_hole)
-    with nav_columns[2]:
         if st.button("Next", width="stretch", disabled=active_hole == holes[-1]):
             set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
             st.rerun()
-    with nav_columns[3]:
+
+    selector_columns = st.columns([1.5, 0.75])
+    with selector_columns[0]:
+        selected_hole = st.selectbox("Jump To Hole", options=holes, index=holes.index(active_hole))
+        if selected_hole != active_hole:
+            set_active_hole(round_runtime["round_id"], int(selected_hole))
+            active_hole = int(selected_hole)
+    with selector_columns[1]:
         render_metric_card("Hole", active_hole, "active")
 
     hole_record = get_hole_record(course, active_hole)
@@ -188,7 +199,7 @@ def render_live_scoring(
             ]
         )
         if hole_image["available"]:
-            st.image(str(hole_image["path"]), use_column_width=True)
+            st.image(str(hole_image["path"]), use_container_width=True)
         else:
             st.caption(hole_image.get("message", "No hole image available"))
     with header_columns[1]:
@@ -205,19 +216,24 @@ def render_live_scoring(
     entry_values: dict[str, object] = {}
 
     st.markdown("#### Enter Scores")
+    st.caption("Phone-first entry stacks each golfer vertically. Use Full Scorecard Edit only when you need to correct earlier holes.")
     score_columns = list(config["score_columns"])
     defaults = []
     for column in score_columns:
         value = current_row[column]
         defaults.append("—" if pd.isna(value) else int(value))
-    entry_columns = st.columns(4)
-    for column, label, score_column, default in zip(entry_columns, player_names, score_columns, defaults):
-        with column:
-            team_tone = "red" if label in (player_names[TEAM_A_PLAYERS[0]], player_names[TEAM_A_PLAYERS[1]]) else "blue"
-            render_status_card(label, current_row["status"], None, tone=team_tone)
+    team_groups = (("red", TEAM_A_PLAYERS), ("blue", TEAM_B_PLAYERS))
+    for team_id, player_indexes in team_groups:
+        render_chip_row([build_team_label(team_id, player_names)], tone="accent")
+        for player_index in player_indexes:
+            label = player_names[player_index]
+            score_column = score_columns[player_index]
+            default = defaults[player_index]
+            saved_text = "No saved score" if default == "—" else f"Saved gross {default}"
+            render_status_card(label, current_row["status"], saved_text, tone=team_id)
             index = SCORE_OPTIONS.index(default) if default in SCORE_OPTIONS else 0
             entry_values[score_column] = st.selectbox(
-                f"{label} Gross",
+                f"{label} gross score",
                 options=SCORE_OPTIONS,
                 index=index,
                 key=f"live::{course}::{format_name}::{active_hole}::{label}",
@@ -228,7 +244,6 @@ def render_live_scoring(
         active_hole,
         format_name=format_name,
         values=entry_values,
-        scoring_mode=scoring_mode,
     )
     preview_result = (
         compute_round_results(
@@ -240,6 +255,9 @@ def render_live_scoring(
             handicap_indexes=handicap_indexes,
             tee_rating=tee_rating,
             allowance_percent=allowance_percent,
+            scramble_mode=scramble_mode,
+            scoring_mode=scoring_mode,
+            stableford_mode=stableford_mode,
         )
         if tee_rating
         else {}
@@ -252,57 +270,52 @@ def render_live_scoring(
             with column:
                 render_status_card(card["title"], card["status"], card["support"])
 
-    action_columns = st.columns(3)
-    with action_columns[0]:
-        if st.button("Save Hole", width="stretch"):
-            updated_scores = _update_scores(
-                round_state["scores"], active_hole, format_name=format_name, values=entry_values
+    if st.button("Save Hole", width="stretch"):
+        updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
+        try:
+            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            st.rerun()
+        except GoogleSheetsError as exc:
+            st.error(str(exc))
+
+    if st.button("Save And Next", width="stretch"):
+        updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
+        try:
+            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
+            st.rerun()
+        except GoogleSheetsError as exc:
+            st.error(str(exc))
+
+    if st.button("Mark Pending", width="stretch"):
+        updated_scores = _update_scores(
+            round_state["scores"],
+            active_hole,
+            format_name=format_name,
+            values=entry_values,
+            force_pending=True,
+        )
+        try:
+            cleared_result = (
+                compute_round_results(
+                    course_df=course_df,
+                    format_name=format_name,
+                    score_df=updated_scores,
+                    player_names=player_names,
+                    player_ids=player_ids,
+                    handicap_indexes=handicap_indexes,
+                    tee_rating=tee_rating,
+                    allowance_percent=allowance_percent,
+                    scramble_mode=scramble_mode,
+                    scoring_mode=scoring_mode,
+                    stableford_mode=stableford_mode,
+                )
+                if tee_rating
+                else {}
             )
-            try:
-                save_scores_for_hole(round_runtime, active_hole, updated_scores, round_state)
-                if preview_result:
-                    save_result_payload(round_runtime["round_id"], preview_result)
-                st.rerun()
-            except GoogleSheetsError as exc:
-                st.error(str(exc))
-    with action_columns[1]:
-        if st.button("Save And Next", width="stretch"):
-            updated_scores = _update_scores(
-                round_state["scores"], active_hole, format_name=format_name, values=entry_values
-            )
-            try:
-                save_scores_for_hole(round_runtime, active_hole, updated_scores, round_state)
-                if preview_result:
-                    save_result_payload(round_runtime["round_id"], preview_result)
-                set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
-                st.rerun()
-            except GoogleSheetsError as exc:
-                st.error(str(exc))
-    with action_columns[2]:
-        if st.button("Mark Pending", width="stretch"):
-            updated_scores = _update_scores(
-                round_state["scores"],
-                active_hole,
-                format_name=format_name,
-                values=entry_values,
-                force_pending=True,
-            )
-            try:
-                save_scores_for_hole(round_runtime, active_hole, updated_scores, round_state)
-                if tee_rating:
-                    cleared_result = compute_round_results(
-                        course_df=course_df,
-                        format_name=format_name,
-                        score_df=updated_scores,
-                        player_names=player_names,
-                        player_ids=player_ids,
-                        handicap_indexes=handicap_indexes,
-                        tee_rating=tee_rating,
-                        allowance_percent=allowance_percent,
-                    )
-                    save_result_payload(round_runtime["round_id"], cleared_result)
-                st.rerun()
-            except GoogleSheetsError as exc:
-                st.error(str(exc))
+            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, cleared_result)
+            st.rerun()
+        except GoogleSheetsError as exc:
+            st.error(str(exc))
 
     return {"active_hole": active_hole, "preview_result": preview_result}

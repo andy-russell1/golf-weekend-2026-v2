@@ -5,7 +5,7 @@ import streamlit as st
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
 from components.live_scoring import render_live_scoring
 from components.score_tracker import render_full_card_editor, render_round_summary_metrics
-from support.app_context import build_page_context, fixture_status_text, initialize_page, render_page_links, render_shared_sidebar, team_format_label
+from support.app_context import build_page_context, fixture_status_text, initialize_page, render_shared_sidebar, team_format_label
 
 
 def main() -> None:
@@ -16,9 +16,8 @@ def main() -> None:
     context = build_page_context(store)
     render_section_header(
         "Live Scoring",
-        "Fast in-round entry stays primary here, with the current hole, shots received, and match state kept front and centre.",
+        "Fast in-round entry stays primary here, with one-hole phone entry first and the full-card editor kept as a secondary correction path.",
     )
-    render_page_links("Live Scoring")
     render_chip_row(
         [
             context["selected_fixture"]["title"],
@@ -34,8 +33,7 @@ def main() -> None:
     with summary_columns[0]:
         render_metric_card("Active Hole", int(context["round_state"]["active_hole"]), "shared with course guide")
     with summary_columns[1]:
-        completed = int(context["round_state"]["scores"]["status"].eq("Complete").sum())
-        render_metric_card("Completed Holes", completed, "saved")
+        render_metric_card("Round Progress", context["round_focus"]["progress_text"], None)
     with summary_columns[2]:
         render_status_card("Match State", fixture_status_text(context["selected_result"]), "updates with saved holes")
 

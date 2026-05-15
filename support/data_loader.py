@@ -6,7 +6,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from support.paths import COURSES_ROOT, DATA_ROOT, IMAGES_ROOT, METADATA_ROOT
+from support.paths import APP_ROOT, COURSES_ROOT, DATA_ROOT, IMAGES_ROOT, METADATA_ROOT
 
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
@@ -259,14 +259,32 @@ def _resolve_image_path(image_path: Any) -> Path | None:
     if not isinstance(image_path, str) or not image_path.strip():
         return None
 
-    path = Path(image_path.strip())
-    candidate = path if path.is_absolute() else DATA_ROOT / path
+    normalized_path = Path(image_path.strip())
+    if normalized_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+        return None
 
-    if candidate.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-        return None
-    if not candidate.exists():
-        return None
-    return candidate
+    candidates: list[Path] = []
+    if normalized_path.is_absolute():
+        candidates.append(normalized_path)
+    else:
+        parts = normalized_path.parts
+        if parts and parts[0] == DATA_ROOT.name:
+            candidates.append(APP_ROOT / normalized_path)
+        elif parts and parts[0] == IMAGES_ROOT.name:
+            candidates.append(DATA_ROOT / normalized_path)
+        else:
+            candidates.extend(
+                [
+                    DATA_ROOT / normalized_path,
+                    IMAGES_ROOT / normalized_path,
+                    APP_ROOT / normalized_path,
+                ]
+            )
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def get_hole_image(course: str, hole: int) -> dict[str, Any]:

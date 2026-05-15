@@ -23,14 +23,6 @@ from support.state_helpers import (
 
 FORMAT_OPTIONS = ("4-Ball", "Stroke Play", "Skins", "Singles")
 TEE_OPTIONS = ("White", "Yellow")
-PAGE_LINKS: tuple[tuple[str, str], ...] = (
-    ("app.py", "Home"),
-    ("pages/1_Weekend_Hub.py", "Weekend Hub"),
-    ("pages/2_Live_Scoring.py", "Live Scoring"),
-    ("pages/3_Match_Centre.py", "Match Centre"),
-    ("pages/4_Course_Guide.py", "Course Guide"),
-    ("pages/5_Setup_Admin.py", "Setup / Admin"),
-)
 
 
 def initialize_page(page_title: str) -> bool:
@@ -79,6 +71,97 @@ def fixture_status_text(result: dict[str, Any]) -> str:
     return "Awaiting scores"
 
 
+def _first_incomplete_hole(scores: pd.DataFrame, fallback_hole: int) -> int:
+    if scores.empty or "hole" not in scores.columns:
+        return fallback_hole
+    incomplete = scores.loc[scores["status"].ne("Complete"), "hole"].dropna()
+    if incomplete.empty:
+        return fallback_hole
+    return int(incomplete.iloc[0])
+
+
+def build_round_focus(
+    selected_fixture: dict[str, Any],
+    round_runtime: dict[str, Any],
+    round_state: dict[str, Any],
+    selected_result: dict[str, Any],
+    tee_rating: dict[str, Any],
+) -> dict[str, Any]:
+    total_holes = len(round_state["scores"].index)
+    completed_holes = int(round_state["scores"]["status"].eq("Complete").sum())
+    active_hole = int(round_state["active_hole"])
+    next_hole = _first_incomplete_hole(round_state["scores"], active_hole)
+    progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "No holes loaded"
+    status_text = fixture_status_text(selected_result)
+
+    if not tee_rating:
+        return {
+            "headline": "Round setup needs attention",
+            "detail": f"No tee rating metadata is available for {round_runtime['tee_label']} tees, so scoring outputs stay locked.",
+            "status_text": status_text,
+            "progress_text": progress_text,
+            "primary_label": "Review setup",
+            "primary_page": "pages/5_Setup_Admin.py",
+            "secondary_label": "Open course guide",
+            "secondary_page": "pages/4_Course_Guide.py",
+            "tone": "gold",
+            "completed_holes": completed_holes,
+            "total_holes": total_holes,
+            "active_hole": active_hole,
+            "next_hole": next_hole,
+        }
+
+    if completed_holes <= 0:
+        return {
+            "headline": "Ready to start scoring",
+            "detail": f"Save hole {active_hole} in Live Scoring to unlock momentum, running totals, and points impact.",
+            "status_text": status_text,
+            "progress_text": progress_text,
+            "primary_label": "Start live scoring",
+            "primary_page": "pages/2_Live_Scoring.py",
+            "secondary_label": "Review the course",
+            "secondary_page": "pages/4_Course_Guide.py",
+            "tone": "green",
+            "completed_holes": completed_holes,
+            "total_holes": total_holes,
+            "active_hole": active_hole,
+            "next_hole": next_hole,
+        }
+
+    if completed_holes < total_holes:
+        return {
+            "headline": "Round in progress",
+            "detail": f"Continue on hole {next_hole}. Match Centre will fill out as more saved holes arrive.",
+            "status_text": status_text,
+            "progress_text": progress_text,
+            "primary_label": "Continue live scoring",
+            "primary_page": "pages/2_Live_Scoring.py",
+            "secondary_label": "Open match centre",
+            "secondary_page": "pages/3_Match_Centre.py",
+            "tone": "blue",
+            "completed_holes": completed_holes,
+            "total_holes": total_holes,
+            "active_hole": active_hole,
+            "next_hole": next_hole,
+        }
+
+    return {
+        "headline": "Round complete",
+        "detail": f"{selected_fixture['title']} has all holes saved. Review the result before the next tee time.",
+        "status_text": status_text,
+        "progress_text": progress_text,
+        "primary_label": "Review match centre",
+        "primary_page": "pages/3_Match_Centre.py",
+        "secondary_label": "Open weekend hub",
+        "secondary_page": "app.py",
+        "tone": "green",
+        "completed_holes": completed_holes,
+        "total_holes": total_holes,
+        "active_hole": active_hole,
+        "next_hole": next_hole,
+    }
+
+
 def render_shared_sidebar() -> dict[str, Any]:
     store = load_app_store()
     weekend_state = store["weekend_state"]
@@ -86,7 +169,7 @@ def render_shared_sidebar() -> dict[str, Any]:
     current_fixture_id = selected_fixture_id_for_ui(weekend_state)
 
     with st.sidebar:
-        st.header("Weekend Context")
+        st.header("Round Context")
         selected_fixture_id = st.selectbox(
             "Round",
             options=fixture_ids,
@@ -109,24 +192,14 @@ def render_shared_sidebar() -> dict[str, Any]:
             snapshot=store["persistence"],
         )
         completed_holes = int(round_state["scores"]["status"].eq("Complete").sum())
+        next_hole = _first_incomplete_hole(round_state["scores"], int(round_state["active_hole"]))
 
         render_connection_panel(store["persistence"]["status"], compact=True)
-        st.caption("Round setup changes live on Setup / Admin. This selector keeps the same fixture context across pages.")
+        st.caption("Use the sidebar to move between pages. This round selector stays shared across the app.")
         st.markdown(f"**{selected_fixture['title']}**")
         st.caption(f"{round_runtime['format_name']} • {round_runtime['tee_label']} tees")
-        st.caption(f"Active hole: {int(round_state['active_hole'])} • Completed: {completed_holes}")
+        st.caption(f"Active hole {int(round_state['active_hole'])} • Next to score {next_hole} • Completed {completed_holes}")
     return store
-
-
-def render_page_links(current_page: str) -> None:
-    for row_start in range(0, len(PAGE_LINKS), 3):
-        columns = st.columns(3)
-        row_items = PAGE_LINKS[row_start : row_start + 3]
-        for column, (path, label) in zip(columns, row_items):
-            with column:
-                if label == current_page:
-                    st.caption("Current page")
-                st.page_link(path, label=label, width="stretch")
 
 
 def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -187,6 +260,13 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
 
     results_by_fixture = build_results_by_fixture(store)
     selected_result = results_by_fixture.get(selected_fixture_id, empty_result(round_runtime["format_name"]))
+    round_focus = build_round_focus(
+        selected_fixture=selected_fixture,
+        round_runtime=round_runtime,
+        round_state=round_state,
+        selected_result=selected_result,
+        tee_rating=tee_rating,
+    )
     player_names = list(round_state["player_names"])
     handicap_indexes = list(round_state["handicap_indexes"])
     shot_views = build_hole_shot_views(
@@ -220,6 +300,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         "player_ids": list(round_state["player_ids"]),
         "handicap_indexes": handicap_indexes,
         "selected_result": selected_result,
+        "round_focus": round_focus,
         "results_by_fixture": results_by_fixture,
         "saved_results": saved_results,
         "shot_views": shot_views,

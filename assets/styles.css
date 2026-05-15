@@ -511,6 +511,24 @@ section.main > div {
   font-weight: 700;
 }
 
+[data-testid="stPageLink"] a {
+  border-radius: 14px;
+  min-height: 3rem;
+  border: 1px solid var(--control-border);
+  background: var(--button-bg);
+  color: var(--button-ink) !important;
+  font-weight: 700;
+}
+
+[data-testid="stPageLink"] a:hover {
+  border-color: rgba(36, 90, 132, 0.28);
+}
+
+.stTextInput,
+.stNumberInput {
+  margin-bottom: 0.35rem;
+}
+
 [data-baseweb="tab-list"] {
   gap: 0.5rem;
 }
@@ -581,5 +599,24 @@ div[data-testid="stExpander"] {
 
   section.main > div {
     padding-top: 1rem;
+  }
+
+  .hero-card {
+    padding: 1.15rem 1.1rem;
+    border-radius: 20px;
+  }
+
+  .fixture-card {
+    min-height: auto;
+    padding: 0.8rem 0.85rem;
+  }
+
+  .stTabs [data-baseweb="tab-list"] {
+    flex-wrap: wrap;
+  }
+
+  .stTabs [data-baseweb="tab"] {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }

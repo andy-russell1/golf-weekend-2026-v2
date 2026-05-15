@@ -37,6 +37,12 @@ streamlit run app.py
 
 If Google Sheets credentials are not configured, the app falls back to session-local storage.
 
+## Product flow
+
+- `app.py` is now the primary `Weekend Hub` overview and should be the default front door.
+- `Live Scoring` is the main on-course workflow; `Full Scorecard Edit` is the secondary correction path.
+- The legacy `pages/1_Weekend_Hub.py` route redirects back to the main hub to avoid duplicate overview pages.
+
 ## Streamlit Community Cloud secrets
 
 Add this structure in the app secrets UI:
@@ -116,3 +122,5 @@ The app will seed headers and default rows for `players`, `rounds`, and `setting
 - `Stroke Play` and `Skins` are UI labels; both use net better-ball team scoring.
 - `Skins` carries tied holes forward to the next outright winner.
 - If Google Sheets is unavailable, the UI remains usable in session fallback mode, but state is not shared across users.
+- The sidebar is the primary page navigation. In-body pages now focus on the current round action instead of repeating a full page-link grid.
+- `Setup / Admin` requires an explicit confirmation before the selected round can be reset.
