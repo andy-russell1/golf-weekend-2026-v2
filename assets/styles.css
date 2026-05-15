@@ -175,10 +175,13 @@ section.main > div {
   background: var(--app-header-bg);
 }
 
-[data-testid="stHeader"] *,
-[data-testid="stToolbar"] * {
+[data-testid="stHeader"] * {
   color: var(--app-header-ink) !important;
   fill: var(--app-header-ink) !important;
+}
+
+[data-testid="stToolbar"] {
+  color: var(--app-header-ink);
 }
 
 .hero-card {

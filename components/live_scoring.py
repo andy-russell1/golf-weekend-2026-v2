@@ -207,10 +207,9 @@ def render_live_scoring(
         defaults.append("—" if pd.isna(value) else int(value))
     team_groups = (("red", TEAM_A_PLAYERS), ("blue", TEAM_B_PLAYERS))
     for team_id, player_indexes in team_groups:
-        team_player_names = [player_names[player_index] for player_index in player_indexes]
         render_status_card(
             team_name(team_id),
-            " + ".join(team_player_names),
+            team_name(team_id),
             "Enter gross scores for this side",
             tone=team_id,
         )
