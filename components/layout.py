@@ -56,11 +56,12 @@ def render_metric_card(label: str, value: Any, supporting: str | None = None, to
 
 
 def render_status_card(title: str, status: str, supporting: str | None = None, tone: str = "neutral") -> None:
+    title_markup = f'<div class="status-title">{title}</div>' if title else ""
     supporting_markup = f'<div class="status-support">{supporting}</div>' if supporting else ""
     st.markdown(
         f"""
         <div class="status-card status-card-{tone}">
-            <div class="status-title">{title}</div>
+            {title_markup}
             <div class="status-value">{status}</div>
             {supporting_markup}
         </div>
