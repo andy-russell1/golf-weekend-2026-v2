@@ -1,0 +1,73 @@
+course,hole,field,issue,action_needed
+clyne,1,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,2,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,3,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,4,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,5,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,6,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,7,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,8,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,9,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,10,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,11,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,12,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,13,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,14,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,15,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,16,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,17,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+clyne,18,image_path,Official image URL was discoverable but direct asset download returned 403.,Retry manual browser download or obtain permitted asset URL.
+neath,1,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,2,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,3,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,4,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,5,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,6,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,7,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,8,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,9,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,10,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,11,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,12,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,13,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,14,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,15,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,16,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,17,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+neath,18,hole_name,Official site labels holes numerically without distinct hole names.,Leave blank unless an official named hole source is found.
+st_pierre_old,1,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,1,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,2,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,2,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,3,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,3,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,4,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,4,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,5,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,5,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,6,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,6,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,7,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,7,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,8,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,8,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,9,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,9,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,10,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,10,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,11,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,11,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,12,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,12,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,13,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,13,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,14,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,14,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,15,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,15,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,16,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,16,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,17,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,17,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,18,hole_name,No official hole name located in accessible sources.,Leave blank unless an official hole guide is found.
+st_pierre_old,18,pro_tip,No official per-hole tip located in accessible sources.,Leave blank unless an official hole guide is found.

@@ -179,3 +179,23 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# OS files
+.DS_Store
+
+# Project local secrets
+.env.*
+!.env.example
+!.env.sample
+.streamlit/secrets.toml
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+*.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cer
+*.der
+*.token
