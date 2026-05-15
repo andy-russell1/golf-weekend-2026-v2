@@ -427,7 +427,7 @@ def score_four_ball(
 
 def _stroke_play_status(team_a_label: str, team_b_label: str, red_total: int, blue_total: int, holes_played: int, complete: bool) -> str:
     if holes_played <= 0:
-        return "No holes completed"
+        return "Scoring not started"
     if red_total == blue_total:
         return "Round tied on net better ball" if complete else f"All square on net better ball through {holes_played}"
     leader = team_a_label if red_total < blue_total else team_b_label
@@ -503,7 +503,7 @@ def score_stroke_play(
 
 def _skins_status(team_a_label: str, team_b_label: str, red_skins: int, blue_skins: int, holes_played: int, carryover: int, complete: bool) -> str:
     if holes_played <= 0:
-        return "No holes completed"
+        return "Scoring not started"
     if red_skins == blue_skins:
         base = f"All square on skins through {holes_played}"
     else:

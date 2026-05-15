@@ -153,7 +153,7 @@ def render_live_scoring(
 
     render_section_header(
         "Live Hole Entry",
-        "Enter one hole at a time, save straight to the weekend workbook, and keep the current round state obvious on a phone.",
+        "Enter one hole at a time, save it straight away, and keep the live state obvious on a phone.",
     )
 
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
@@ -216,7 +216,7 @@ def render_live_scoring(
     entry_values: dict[str, object] = {}
 
     st.markdown("#### Enter Scores")
-    st.caption("Phone-first entry stacks each golfer vertically. Use Full Scorecard Edit only when you need to correct earlier holes.")
+    st.caption("Phone-first entry stacks each golfer vertically. Use Full Scorecard Edit only when you need to correct an earlier hole.")
     score_columns = list(config["score_columns"])
     defaults = []
     for column in score_columns:

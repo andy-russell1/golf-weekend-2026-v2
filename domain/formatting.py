@@ -59,7 +59,7 @@ def difficulty_label(stroke_index: Any) -> tuple[str, str]:
 
 def format_match_status(balance: int, positive_label: str, negative_label: str, holes_played: int, total_holes: int = 18) -> str:
     if holes_played <= 0:
-        return "No holes completed"
+        return "Scoring not started"
 
     holes_remaining = total_holes - holes_played
     if abs(balance) > holes_remaining:

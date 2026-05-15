@@ -18,7 +18,7 @@ Seeded weekend lineup:
 
 ## Repo layout
 
-- `app.py` main Streamlit entrypoint
+- `app.py` main Streamlit entrypoint and page router
 - `pages/` multipage Streamlit views
 - `components/` UI sections
 - `domain/` golf logic and scoring
@@ -39,9 +39,9 @@ If Google Sheets credentials are not configured, the app falls back to session-l
 
 ## Product flow
 
-- `app.py` is now the primary `Weekend Hub` overview and should be the default front door.
+- `Weekend Hub` is the default front door in the sidebar navigation.
 - `Live Scoring` is the main on-course workflow; `Full Scorecard Edit` is the secondary correction path.
-- The legacy `pages/1_Weekend_Hub.py` route redirects back to the main hub to avoid duplicate overview pages.
+- `pages/1_Weekend_Hub.py` now owns the hub view so the home page label stays clean in navigation.
 
 ## Streamlit Community Cloud secrets
 
@@ -49,7 +49,7 @@ Add this structure in the app secrets UI:
 
 ```toml
 [golf_weekend]
-workbook_name = "South_Wales_Ryder_Cup_2026_google_sheets_ready_v2"
+workbook_name = "Russell_Kelly_Invitational_2026_google_sheets_ready_v2"
 # workbook_id = "optional-google-sheet-id"
 
 [gcp_service_account]

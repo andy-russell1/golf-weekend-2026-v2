@@ -17,7 +17,7 @@ def main() -> None:
     context = build_page_context(store)
     render_section_header(
         "Course Guide",
-        "Venue briefing, hole explorer, yardages, and live shot allocation support stay together here, even when hole imagery is missing.",
+        "Venue notes, hole explorer, yardages, and shot allocation stay together here.",
     )
     render_chip_row(
         [

@@ -26,7 +26,6 @@ TEE_OPTIONS = ("White", "Yellow")
 
 
 def initialize_page(page_title: str) -> bool:
-    st.set_page_config(page_title=f"{page_title} | Golf Weekend 2026", layout="wide")
     load_css(ASSETS_ROOT / "styles.css")
 
     if not data_package_exists():
@@ -96,8 +95,8 @@ def build_round_focus(
 
     if not tee_rating:
         return {
-            "headline": "Round setup needs attention",
-            "detail": f"No tee rating metadata is available for {round_runtime['tee_label']} tees, so scoring outputs stay locked.",
+            "headline": "Finish round setup",
+            "detail": f"No tee rating data is available for {round_runtime['tee_label']} tees yet, so scoring stays locked.",
             "status_text": status_text,
             "progress_text": progress_text,
             "primary_label": "Review setup",
@@ -113,15 +112,15 @@ def build_round_focus(
 
     if completed_holes <= 0:
         return {
-            "headline": "Ready to start scoring",
-            "detail": f"Save hole {active_hole} in Live Scoring to unlock momentum, running totals, and points impact.",
+            "headline": "Live scoring not started",
+            "detail": f"Start on hole {active_hole} when you are ready. The live match view appears after the first save.",
             "status_text": status_text,
             "progress_text": progress_text,
-            "primary_label": "Start live scoring",
+            "primary_label": "Open live scoring",
             "primary_page": "pages/2_Live_Scoring.py",
-            "secondary_label": "Review the course",
+            "secondary_label": "Open course guide",
             "secondary_page": "pages/4_Course_Guide.py",
-            "tone": "green",
+            "tone": "neutral",
             "completed_holes": completed_holes,
             "total_holes": total_holes,
             "active_hole": active_hole,
@@ -131,7 +130,7 @@ def build_round_focus(
     if completed_holes < total_holes:
         return {
             "headline": "Round in progress",
-            "detail": f"Continue on hole {next_hole}. Match Centre will fill out as more saved holes arrive.",
+            "detail": f"Continue on hole {next_hole}. Match Centre fills in as more holes are saved.",
             "status_text": status_text,
             "progress_text": progress_text,
             "primary_label": "Continue live scoring",
@@ -153,7 +152,7 @@ def build_round_focus(
         "primary_label": "Review match centre",
         "primary_page": "pages/3_Match_Centre.py",
         "secondary_label": "Open weekend hub",
-        "secondary_page": "app.py",
+        "secondary_page": "pages/1_Weekend_Hub.py",
         "tone": "green",
         "completed_holes": completed_holes,
         "total_holes": total_holes,
@@ -207,7 +206,7 @@ def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
         "primary_label": "Open live scoring",
         "primary_page": "pages/2_Live_Scoring.py",
         "secondary_label": "Open weekend hub",
-        "secondary_page": "app.py",
+        "secondary_page": "pages/1_Weekend_Hub.py",
         "tone": "blue",
         "completed_holes": completed_holes,
         "total_holes": total_holes,
@@ -250,7 +249,7 @@ def render_shared_sidebar() -> dict[str, Any]:
         next_hole = _first_incomplete_hole(round_state["scores"], int(round_state["active_hole"]))
 
         render_connection_panel(store["persistence"]["status"], compact=True)
-        st.caption("Use the sidebar to move between pages. This round selector stays shared across the app.")
+        st.caption("Use the sidebar to move around. The selected round stays in sync across each page.")
         st.markdown(f"**{selected_fixture['title']}**")
         st.caption(f"{round_runtime['format_name']} • {round_runtime['tee_label']} tees")
         st.caption(f"Active hole {int(round_state['active_hole'])} • Next to score {next_hole} • Completed {completed_holes}")

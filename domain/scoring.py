@@ -6,7 +6,7 @@ import pandas as pd
 
 from domain.handicap import build_player_handicap_table, build_shot_allocation_table
 from domain.matchplay import score_four_ball, score_singles, score_skins, score_stroke_play
-from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, build_team_label, points_available_for_format
+from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, build_team_label, points_available_for_format, team_name, team_short_name
 
 
 def compute_round_results(
@@ -181,15 +181,15 @@ def compute_weekend_race(results_by_fixture: dict[str, dict[str, Any]]) -> dict[
     blue_can_win = blue_points + remaining_points >= winning_target
 
     if red_points >= winning_target and red_points > blue_points:
-        status = "Team Red has won the weekend"
+        status = f"{team_name('red')} have won the weekend"
     elif blue_points >= winning_target and blue_points > red_points:
-        status = "Team Blue has won the weekend"
+        status = f"{team_name('blue')} have won the weekend"
     elif remaining_points == 0 and red_points == blue_points:
         status = "Weekend tied"
     elif remaining_points == 0:
         status = "Weekend complete"
     else:
-        leader = "Team Red" if red_points > blue_points else "Team Blue" if blue_points > red_points else "All Square"
+        leader = team_name("red") if red_points > blue_points else team_name("blue") if blue_points > red_points else "All Square"
         if leader == "All Square":
             status = f"All square with {remaining_points:.1f} points left"
         else:
@@ -214,8 +214,8 @@ def compute_weekend_race(results_by_fixture: dict[str, dict[str, Any]]) -> dict[
         "red_can_win": red_can_win,
         "blue_can_win": blue_can_win,
         "status": status,
-        "red_path": _path_text("Red", red_needed, red_can_win, red_points),
-        "blue_path": _path_text("Blue", blue_needed, blue_can_win, blue_points),
+        "red_path": _path_text(team_short_name("red"), red_needed, red_can_win, red_points),
+        "blue_path": _path_text(team_short_name("blue"), blue_needed, blue_can_win, blue_points),
     }
 
 

@@ -9,12 +9,14 @@ from components.layout import (
     render_chip_row,
     render_metric_card,
     render_momentum_strip,
+    render_page_action,
     render_placeholder_panel,
     render_section_header,
     render_status_card,
 )
 from domain.formatting import format_points, format_score_value
 from domain.scoring import compute_optional_awards
+from domain.weekend_config import team_short_name
 
 
 def _format_total_table(df: pd.DataFrame) -> pd.DataFrame:
@@ -44,6 +46,8 @@ def _match_leader_text(balance: int, left_label: str, right_label: str) -> tuple
 
 def _render_live_answer(result: dict[str, Any]) -> None:
     st.markdown("#### Live Answer")
+    red_label = team_short_name("red")
+    blue_label = team_short_name("blue")
 
     if result["format_name"] == "Singles":
         matches = result.get("matches", [])
@@ -64,9 +68,9 @@ def _render_live_answer(result: dict[str, Any]) -> None:
         blue_total = int(stroke_play.get("blue_total", 0))
         next_hole = _next_pending_hole(result["summary_df"])
         if red_total < blue_total:
-            status, tone = f"Red lead by {blue_total - red_total} net shots", "red"
+            status, tone = f"{red_label} lead by {blue_total - red_total} net shots", "red"
         elif blue_total < red_total:
-            status, tone = f"Blue lead by {red_total - blue_total} net shots", "blue"
+            status, tone = f"{blue_label} lead by {red_total - blue_total} net shots", "blue"
         else:
             status, tone = "Round all square on net better ball", "neutral"
         support = "Round complete" if result.get("is_complete") else f"Hole {next_hole} is the next counting swing" if next_hole else "Awaiting next saved hole"
@@ -80,9 +84,9 @@ def _render_live_answer(result: dict[str, Any]) -> None:
         carryover = int(skins.get("carryover_skins", 1))
         next_hole = _next_pending_hole(result["summary_df"])
         if red_skins > blue_skins:
-            status, tone = f"Red lead by {red_skins - blue_skins} skins", "red"
+            status, tone = f"{red_label} lead by {red_skins - blue_skins} skins", "red"
         elif blue_skins > red_skins:
-            status, tone = f"Blue lead by {blue_skins - red_skins} skins", "blue"
+            status, tone = f"{blue_label} lead by {blue_skins - red_skins} skins", "blue"
         else:
             status, tone = "Skins all square", "neutral"
         if result.get("is_complete"):
@@ -107,15 +111,17 @@ def _render_live_answer(result: dict[str, Any]) -> None:
 def _render_points_cards(result: dict[str, Any]) -> None:
     awarded = result.get("awarded_points", {"red": 0.0, "blue": 0.0})
     projected = result.get("projected_points", {"red": 0.0, "blue": 0.0})
+    red_label = team_short_name("red")
+    blue_label = team_short_name("blue")
     columns = st.columns(4)
     with columns[0]:
-        render_metric_card("Red Awarded", format_points(float(awarded["red"])), "banked", tone="red")
+        render_metric_card(f"{red_label} Awarded", format_points(float(awarded["red"])), "banked", tone="red")
     with columns[1]:
-        render_metric_card("Blue Awarded", format_points(float(awarded["blue"])), "banked", tone="blue")
+        render_metric_card(f"{blue_label} Awarded", format_points(float(awarded["blue"])), "banked", tone="blue")
     with columns[2]:
-        render_metric_card("Red Live", format_points(float(projected["red"])), "if it ended now", tone="red")
+        render_metric_card(f"{red_label} Live", format_points(float(projected["red"])), "if it ended now", tone="red")
     with columns[3]:
-        render_metric_card("Blue Live", format_points(float(projected["blue"])), "if it ended now", tone="blue")
+        render_metric_card(f"{blue_label} Live", format_points(float(projected["blue"])), "if it ended now", tone="blue")
 
 
 def render_match_centre_empty_state(
@@ -126,35 +132,29 @@ def render_match_centre_empty_state(
 ) -> None:
     render_status_card(
         "Match Centre",
-        "Waiting for the first saved hole",
-        "Momentum, running totals, and points impact appear after Live Scoring saves hole 1.",
-        tone="gold",
+        "Live match view appears after hole 1 is saved",
+        "Start scoring when you are ready. Match status and points swing update from the first saved hole.",
+        tone="neutral",
     )
-    render_chip_row(
-        [
-            selected_fixture["title"],
-            format_name,
-            f"{tee_label} tees",
-            round_focus["progress_text"],
-        ],
-        tone="accent",
-    )
+    render_chip_row([selected_fixture["title"], format_name, f"{tee_label} tees"], tone="accent")
     action_columns = st.columns(2)
     with action_columns[0]:
-        st.page_link("pages/2_Live_Scoring.py", label=round_focus["primary_label"], width="stretch")
+        render_page_action("pages/2_Live_Scoring.py", round_focus["primary_label"], key=f"match-empty-primary::{selected_fixture['id']}", primary=True)
     with action_columns[1]:
-        st.page_link("pages/4_Course_Guide.py", label="Open course guide", width="stretch")
+        render_page_action("pages/4_Course_Guide.py", "Open course guide", key=f"match-empty-secondary::{selected_fixture['id']}")
     render_placeholder_panel(
-        "No live scoring saved yet",
-        "Use Live Scoring for the selected round. Save the first hole to unlock hole-by-hole results, match status, and weekend points impact here.",
+        "No live hole saved yet",
+        "Save the opening hole in Live Scoring to bring the live match answer, momentum, and weekend points view online here.",
     )
 
 
 def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_header: bool = True) -> None:
+    red_label = team_short_name("red")
+    blue_label = team_short_name("blue")
     if show_header:
         render_section_header(
             "Match Centre",
-            "Round status, momentum, hole-by-hole swings, and Ryder Cup points impact for the selected round.",
+            "Round status, momentum, hole-by-hole swings, and weekend points impact for the selected round.",
         )
 
     summary = result.get("summary_df")
@@ -235,9 +235,9 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
         with headline_columns[0]:
             render_status_card("Stroke Play", stroke_play.get("current_status", "Awaiting scores"), f"{stroke_play.get('holes_played', 0)} holes played")
         with headline_columns[1]:
-            render_metric_card("Red Total", stroke_play.get("red_total", 0), "best net total", tone="red")
+            render_metric_card(f"{red_label} Total", stroke_play.get("red_total", 0), "best net total", tone="red")
         with headline_columns[2]:
-            render_metric_card("Blue Total", stroke_play.get("blue_total", 0), "best net total", tone="blue")
+            render_metric_card(f"{blue_label} Total", stroke_play.get("blue_total", 0), "best net total", tone="blue")
 
         if "player_totals" in result and isinstance(result["player_totals"], pd.DataFrame) and not result["player_totals"].empty:
             st.markdown("#### Player Totals")
@@ -266,12 +266,12 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "hole": "Hole",
                         "par": "Par",
                         "si": "SI",
-                        "team_a_best_net": "Red Best Net",
-                        "team_b_best_net": "Blue Best Net",
-                        "red_running_total": "Red Running Total",
-                        "blue_running_total": "Blue Running Total",
-                        "team_a_contributor": "Red Counter",
-                        "team_b_contributor": "Blue Counter",
+                        "team_a_best_net": f"{red_label} Best Net",
+                        "team_b_best_net": f"{blue_label} Best Net",
+                        "red_running_total": f"{red_label} Running Total",
+                        "blue_running_total": f"{blue_label} Running Total",
+                        "team_a_contributor": f"{red_label} Counter",
+                        "team_b_contributor": f"{blue_label} Counter",
                         "hole_result": "Hole Result",
                     }
                 ),
@@ -284,9 +284,9 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
         with headline_columns[0]:
             render_status_card("Skins", skins.get("current_status", "Awaiting scores"), f"{skins.get('holes_played', 0)} holes played")
         with headline_columns[1]:
-            render_metric_card("Red Skins", skins.get("red_skins", 0), "won", tone="red")
+            render_metric_card(f"{red_label} Skins", skins.get("red_skins", 0), "won", tone="red")
         with headline_columns[2]:
-            render_metric_card("Blue Skins", skins.get("blue_skins", 0), "won", tone="blue")
+            render_metric_card(f"{blue_label} Skins", skins.get("blue_skins", 0), "won", tone="blue")
         with headline_columns[3]:
             render_metric_card("Current Pot", skins.get("carryover_skins", 1), "next hole")
 
@@ -320,15 +320,15 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "hole": "Hole",
                         "par": "Par",
                         "si": "SI",
-                        "team_a_best_net": "Red Best Net",
-                        "team_b_best_net": "Blue Best Net",
+                        "team_a_best_net": f"{red_label} Best Net",
+                        "team_b_best_net": f"{blue_label} Best Net",
                         "skins_pot": "Skins Pot",
-                        "red_skins_awarded": "Red Skins Awarded",
-                        "blue_skins_awarded": "Blue Skins Awarded",
-                        "red_running_skins": "Red Running Skins",
-                        "blue_running_skins": "Blue Running Skins",
-                        "team_a_contributor": "Red Counter",
-                        "team_b_contributor": "Blue Counter",
+                        "red_skins_awarded": f"{red_label} Skins Awarded",
+                        "blue_skins_awarded": f"{blue_label} Skins Awarded",
+                        "red_running_skins": f"{red_label} Running Skins",
+                        "blue_running_skins": f"{blue_label} Running Skins",
+                        "team_a_contributor": f"{red_label} Counter",
+                        "team_b_contributor": f"{blue_label} Counter",
                         "hole_result": "Hole Result",
                     }
                 ),
@@ -386,12 +386,12 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "si": "SI",
                         "hole_result": "Hole Result",
                         "match_status": "Match Status",
-                        "team_a_best_net": "Red Best Net",
-                        "team_b_best_net": "Blue Best Net",
-                        "team_a_contributor": "Red Counter",
-                        "team_b_contributor": "Blue Counter",
-                        "team_a_best_gross": "Red Best Gross",
-                        "team_b_best_gross": "Blue Best Gross",
+                        "team_a_best_net": f"{red_label} Best Net",
+                        "team_b_best_net": f"{blue_label} Best Net",
+                        "team_a_contributor": f"{red_label} Counter",
+                        "team_b_contributor": f"{blue_label} Counter",
+                        "team_a_best_gross": f"{red_label} Best Gross",
+                        "team_b_best_gross": f"{blue_label} Best Gross",
                     }
                 ),
                 width="stretch",

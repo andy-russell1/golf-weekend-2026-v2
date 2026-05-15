@@ -1,61 +1,78 @@
-:root {
+:root,
+html[data-rki-theme="light"] {
   color-scheme: light;
-  --ink: #19242f;
-  --muted: #5f6c78;
-  --surface: #f7f4ee;
-  --surface-strong: #ece4d6;
-  --card: rgba(255, 255, 255, 0.94);
-  --line: rgba(28, 44, 59, 0.12);
-  --shadow: 0 16px 34px rgba(29, 40, 51, 0.08);
-  --app-header-bg: rgba(247, 244, 238, 0.85);
-  --app-header-ink: #19242f;
-  --sidebar-bg-start: #1c2833;
-  --sidebar-bg-end: #23303d;
-  --sidebar-ink: #f8f3ea;
-  --sidebar-muted: rgba(248, 243, 234, 0.72);
+  --app-font: "Avenir Next", "Segoe UI", sans-serif;
+  --weight-regular: 400;
+  --weight-medium: 400;
+  --weight-semibold: 500;
+  --weight-strong: 600;
+  --ink: #1d2833;
+  --muted: #64717c;
+  --surface: #f7f1e7;
+  --surface-strong: #ece2d2;
+  --card: rgba(255, 250, 243, 0.96);
+  --line: rgba(41, 56, 68, 0.12);
+  --shadow: 0 18px 32px rgba(66, 54, 39, 0.08);
+  --app-header-bg: rgba(247, 241, 231, 0.92);
+  --app-header-ink: #1d2833;
+  --sidebar-bg-start: #efe4d4;
+  --sidebar-bg-end: #f7efe4;
+  --sidebar-ink: #1d2833;
+  --sidebar-muted: rgba(29, 40, 51, 0.7);
   --control-bg: rgba(255, 255, 255, 0.96);
-  --control-ink: #1f2d39;
-  --control-muted: #62707c;
-  --control-border: rgba(31, 45, 57, 0.12);
-  --button-bg: rgba(255, 255, 255, 0.96);
-  --button-ink: #1f2d39;
-  --red: #a63a37;
-  --red-soft: #f5e1df;
-  --blue: #245a84;
-  --blue-soft: #dceaf4;
-  --green: #2e6954;
-  --green-soft: #ddebe5;
-  --gold: #a47a2d;
-  --gold-soft: #f4ead3;
+  --control-ink: #1d2833;
+  --control-muted: #64717c;
+  --control-border: rgba(41, 56, 68, 0.12);
+  --button-bg: rgba(255, 255, 255, 0.98);
+  --button-ink: #1d2833;
+  --button-primary-bg: #1d5d52;
+  --button-primary-ink: #fffaf3;
+  --red: #9f4a46;
+  --red-soft: #f4dfdc;
+  --blue: #335d82;
+  --blue-soft: #dde8f1;
+  --green: #2f6d5e;
+  --green-soft: #e0ede8;
+  --gold: #9d7a3e;
+  --gold-soft: #f2e7d0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --ink: #edf2f7;
-    --muted: #a8b5c2;
-    --surface: #101720;
-    --surface-strong: #1b2530;
-    --card: rgba(24, 34, 45, 0.94);
-    --line: rgba(222, 232, 240, 0.12);
-    --shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
-    --app-header-bg: rgba(16, 23, 32, 0.9);
-    --app-header-ink: #edf2f7;
-    --sidebar-bg-start: #121a23;
-    --sidebar-bg-end: #18222d;
-    --sidebar-ink: #edf2f7;
-    --sidebar-muted: rgba(237, 242, 247, 0.72);
-    --control-bg: rgba(28, 38, 50, 0.96);
-    --control-ink: #edf2f7;
-    --control-muted: #a8b5c2;
-    --control-border: rgba(237, 242, 247, 0.12);
-    --button-bg: rgba(28, 38, 50, 0.96);
-    --button-ink: #edf2f7;
-    --red-soft: rgba(166, 58, 55, 0.2);
-    --blue-soft: rgba(36, 90, 132, 0.22);
-    --green-soft: rgba(46, 105, 84, 0.22);
-    --gold-soft: rgba(164, 122, 45, 0.22);
-  }
+html[data-rki-theme="dark"] {
+  color-scheme: dark;
+  --app-font: "Avenir Next", "Segoe UI", sans-serif;
+  --weight-regular: 400;
+  --weight-medium: 400;
+  --weight-semibold: 500;
+  --weight-strong: 600;
+  --ink: #edf3f7;
+  --muted: #a8b4bf;
+  --surface: #0f1720;
+  --surface-strong: #192430;
+  --card: rgba(23, 33, 44, 0.94);
+  --line: rgba(226, 235, 242, 0.12);
+  --shadow: 0 20px 38px rgba(0, 0, 0, 0.34);
+  --app-header-bg: rgba(15, 23, 32, 0.92);
+  --app-header-ink: #edf3f7;
+  --sidebar-bg-start: #15202b;
+  --sidebar-bg-end: #1b2834;
+  --sidebar-ink: #edf3f7;
+  --sidebar-muted: rgba(237, 243, 247, 0.7);
+  --control-bg: rgba(26, 37, 49, 0.96);
+  --control-ink: #edf3f7;
+  --control-muted: #a8b4bf;
+  --control-border: rgba(237, 243, 247, 0.12);
+  --button-bg: rgba(27, 39, 52, 0.96);
+  --button-ink: #edf3f7;
+  --button-primary-bg: #3f8f7f;
+  --button-primary-ink: #f7fbfc;
+  --red: #de8c87;
+  --red-soft: rgba(159, 74, 70, 0.22);
+  --blue: #8eb4d3;
+  --blue-soft: rgba(51, 93, 130, 0.24);
+  --green: #88c4b3;
+  --green-soft: rgba(47, 109, 94, 0.24);
+  --gold: #d8ba7c;
+  --gold-soft: rgba(157, 122, 62, 0.24);
 }
 
 .stApp {
@@ -77,8 +94,30 @@ section.main > div {
 .stApp h4,
 .stApp h5,
 .stApp h6,
-.stApp div[data-testid="stMarkdownContainer"] {
+.stApp div[data-testid="stMarkdownContainer"],
+.stButton button,
+.stDownloadButton button,
+[data-baseweb="tab"],
+[data-baseweb="select"] *,
+[data-baseweb="input"] * {
   color: var(--ink);
+  font-family: var(--app-font);
+}
+
+[data-testid="stSidebarNav"] p,
+[data-testid="stSidebarNav"] a,
+[data-testid="stSidebarNav"] span,
+.stDataFrameGlideDataEditor {
+  font-family: var(--app-font) !important;
+}
+
+[data-testid="stSidebarNav"] a,
+[data-testid="stSidebarNav"] span {
+  font-weight: var(--weight-medium) !important;
+}
+
+.stDataFrameGlideDataEditor {
+  --gdg-font-family: var(--app-font) !important;
 }
 
 .stApp a {
@@ -87,7 +126,7 @@ section.main > div {
 
 [data-testid="stSidebar"] {
   background: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(41, 56, 68, 0.08);
 }
 
 [data-testid="stSidebar"] h1,
@@ -175,13 +214,13 @@ section.main > div {
 
 .hero-card {
   background:
-    linear-gradient(135deg, rgba(20, 31, 41, 0.97), rgba(34, 48, 61, 0.95)),
-    linear-gradient(90deg, rgba(166, 58, 55, 0.12), rgba(36, 90, 132, 0.12));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+    linear-gradient(135deg, rgba(255, 250, 243, 0.98), rgba(244, 234, 220, 0.96)),
+    linear-gradient(90deg, rgba(159, 74, 70, 0.12), rgba(51, 93, 130, 0.1));
+  border: 1px solid rgba(41, 56, 68, 0.08);
   border-radius: 24px;
   padding: 1.45rem 1.55rem;
   margin-bottom: 1rem;
-  box-shadow: 0 26px 50px rgba(17, 23, 31, 0.16);
+  box-shadow: 0 22px 44px rgba(66, 54, 39, 0.1);
   position: relative;
   overflow: hidden;
 }
@@ -191,21 +230,21 @@ section.main > div {
   position: absolute;
   inset: 0 auto 0 0;
   width: 6px;
-  background: linear-gradient(180deg, rgba(166, 58, 55, 0.9), rgba(36, 90, 132, 0.9));
+  background: linear-gradient(180deg, rgba(159, 74, 70, 0.88), rgba(51, 93, 130, 0.82));
 }
 
 .hero-kicker {
-  color: rgba(248, 243, 234, 0.8);
+  color: rgba(29, 40, 51, 0.62);
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   margin-bottom: 0.35rem;
 }
 
 .hero-title {
-  color: #fff8ef;
-  font-family: "Inter", sans-serif;
+  color: var(--ink);
+  font-family: var(--app-font);
   font-size: 2rem;
   line-height: 1.05;
   margin-bottom: 0.28rem;
@@ -213,13 +252,13 @@ section.main > div {
 
 .hero-subtitle,
 .hero-meta {
-  color: rgba(255, 248, 239, 0.9);
+  color: rgba(29, 40, 51, 0.86);
   font-size: 0.98rem;
 }
 
 .hero-meta {
   margin-top: 0.35rem;
-  color: rgba(255, 248, 239, 0.72);
+  color: rgba(29, 40, 51, 0.68);
 }
 
 .section-heading {
@@ -227,8 +266,9 @@ section.main > div {
 }
 
 .section-title {
+  font-family: var(--app-font);
   font-size: 1.22rem;
-  font-weight: 800;
+  font-weight: var(--weight-semibold);
 }
 
 .section-subtitle {
@@ -265,13 +305,20 @@ section.main > div {
 .metric-card-green,
 .status-card-green {
   border-color: rgba(46, 105, 84, 0.24);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--green-soft));
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), var(--green-soft));
 }
 
 .metric-card-gold,
 .status-card-gold {
   border-color: rgba(164, 122, 45, 0.24);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--gold-soft));
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), var(--gold-soft));
+}
+
+.metric-card-neutral,
+.status-card-neutral {
+  border-color: rgba(41, 56, 68, 0.1);
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(239, 228, 212, 0.88));
+  box-shadow: inset 3px 0 0 rgba(100, 113, 124, 0.32), var(--shadow);
 }
 
 .stInfo,
@@ -283,13 +330,20 @@ section.main > div {
 
 .stTabs [data-baseweb="tab-list"] {
   gap: 0.35rem;
+  width: fit-content;
+  background: color-mix(in srgb, var(--surface-strong) 82%, transparent);
+  padding: 0.28rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
 }
 
 .stTabs [data-baseweb="tab"] {
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid var(--line);
-  padding: 0.35rem 0.9rem;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.4rem 1rem;
+  font-weight: var(--weight-medium);
+  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 }
 
 .stButton button,
@@ -307,19 +361,21 @@ section.main > div {
 
 .metric-label,
 .status-title {
+  font-family: var(--app-font);
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: var(--weight-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   margin-bottom: 0.4rem;
 }
 
 .metric-value,
 .status-value {
+  font-family: var(--app-font);
   font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1.1;
+  font-weight: var(--weight-strong);
+  line-height: 1.14;
 }
 
 .metric-support,
@@ -345,17 +401,19 @@ section.main > div {
 }
 
 .fixture-title {
+  font-family: var(--app-font);
   font-size: 1.02rem;
-  font-weight: 800;
+  font-weight: var(--weight-strong);
   line-height: 1.2;
 }
 
 .fixture-format {
+  font-family: var(--app-font);
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .fixture-schedule {
@@ -366,7 +424,7 @@ section.main > div {
 
 .fixture-status {
   font-size: 1.12rem;
-  font-weight: 700;
+  font-weight: var(--weight-semibold);
   line-height: 1.25;
   margin-bottom: 0.8rem;
 }
@@ -383,7 +441,7 @@ section.main > div {
   border-radius: 999px;
   padding: 0.36rem 0.72rem;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
 }
 
 .fixture-point-red {
@@ -404,7 +462,8 @@ section.main > div {
   justify-content: center;
   border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
+  font-family: var(--app-font);
 }
 
 .badge {
@@ -429,8 +488,9 @@ section.main > div {
 
 .badge-success,
 .info-chip-accent {
-  background: var(--green-soft);
-  color: var(--green);
+  background: rgba(255, 250, 243, 0.92);
+  color: var(--ink);
+  border: 1px solid rgba(51, 93, 130, 0.18);
 }
 
 .chip-row {
@@ -485,8 +545,9 @@ section.main > div {
 }
 
 .placeholder-title {
+  font-family: var(--app-font);
   font-size: 1.02rem;
-  font-weight: 800;
+  font-weight: var(--weight-strong);
   margin-bottom: 0.35rem;
 }
 
@@ -501,14 +562,25 @@ section.main > div {
   border-radius: 15px;
   min-height: 3rem;
   border: 1px solid var(--control-border);
-  font-weight: 700;
+  font-weight: var(--weight-medium);
   background: var(--button-bg);
   color: var(--button-ink);
+  box-shadow: 0 10px 24px rgba(66, 54, 39, 0.06);
+}
+
+.stButton button[kind="primary"] {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-ink);
+  border-color: transparent;
+}
+
+.stButton button[kind="primary"] p {
+  color: var(--button-primary-ink) !important;
 }
 
 .stSelectbox label,
 .stNumberInput label {
-  font-weight: 700;
+  font-weight: var(--weight-medium);
 }
 
 [data-testid="stPageLink"] a {
@@ -517,7 +589,7 @@ section.main > div {
   border: 1px solid var(--control-border);
   background: var(--button-bg);
   color: var(--button-ink) !important;
-  font-weight: 700;
+  font-weight: var(--weight-medium);
 }
 
 [data-testid="stPageLink"] a:hover {
@@ -538,7 +610,14 @@ section.main > div {
 }
 
 [data-baseweb="tab"][aria-selected="true"] {
-  color: var(--ink) !important;
+  color: var(--button-primary-ink) !important;
+  background: var(--button-primary-bg) !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 24px rgba(21, 31, 42, 0.12);
+}
+
+.stTabs [data-baseweb="tab-highlight"] {
+  display: none;
 }
 
 [data-baseweb="select"] > div,
@@ -572,14 +651,186 @@ div[data-testid="stExpander"] {
   background: color-mix(in srgb, var(--card) 68%, transparent);
 }
 
-@media (prefers-color-scheme: dark) {
-  .hero-card {
-    box-shadow: 0 26px 50px rgba(0, 0, 0, 0.34);
-  }
+html[data-rki-theme="dark"] [data-testid="stSidebar"] {
+  border-right-color: rgba(237, 243, 247, 0.06);
+}
 
-  [data-testid="stSidebar"] {
-    border-right-color: rgba(255, 255, 255, 0.05);
-  }
+html[data-rki-theme="dark"] .hero-card {
+  background:
+    linear-gradient(135deg, rgba(21, 31, 42, 0.98), rgba(28, 40, 53, 0.96)),
+    linear-gradient(90deg, rgba(159, 74, 70, 0.12), rgba(51, 93, 130, 0.12));
+  border-color: rgba(237, 243, 247, 0.08);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.36);
+}
+
+html[data-rki-theme="dark"] .hero-kicker {
+  color: rgba(237, 243, 247, 0.66);
+}
+
+html[data-rki-theme="dark"] .hero-title,
+html[data-rki-theme="dark"] .hero-subtitle,
+html[data-rki-theme="dark"] .hero-meta {
+  color: #f4f7fa;
+}
+
+html[data-rki-theme="dark"] .hero-meta {
+  color: rgba(244, 247, 250, 0.72);
+}
+
+html[data-rki-theme="dark"] .metric-card-neutral,
+html[data-rki-theme="dark"] .status-card-neutral {
+  background: linear-gradient(180deg, rgba(24, 35, 46, 0.96), rgba(31, 43, 55, 0.92));
+  box-shadow: inset 3px 0 0 rgba(168, 180, 191, 0.28), var(--shadow);
+}
+
+html[data-rki-theme="dark"] .badge-success,
+html[data-rki-theme="dark"] .info-chip-accent {
+  background: rgba(27, 39, 52, 0.94);
+  border-color: rgba(142, 180, 211, 0.24);
+}
+
+html[data-rki-theme="dark"] .stTabs [data-baseweb="tab-list"] {
+  background: rgba(25, 36, 48, 0.9);
+}
+
+html[data-rki-theme="dark"] [data-baseweb="tab"][aria-selected="true"] {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+}
+
+html[data-rki-theme="dark"] [data-testid="stDataFrame"],
+html[data-rki-theme="dark"] [data-testid="stTable"] {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+}
+
+html[data-rki-theme="dark"] div[data-testid="stExpander"] {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+}
+
+html[data-rki-theme="dark"] .stButton button,
+html[data-rki-theme="dark"] .stDownloadButton button {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+html[data-rki-theme="dark"] [data-baseweb="select"] > div,
+html[data-rki-theme="dark"] [data-baseweb="input"] > div,
+html[data-rki-theme="dark"] .stTextInput input,
+html[data-rki-theme="dark"] .stNumberInput input,
+html[data-rki-theme="dark"] .stTextArea textarea {
+  background: rgba(25, 36, 48, 0.96) !important;
+}
+
+html[data-rki-theme="dark"] .stTabs [data-baseweb="tab"] {
+  color: rgba(237, 243, 247, 0.74) !important;
+}
+
+html[data-rki-theme="light"] .stTabs [data-baseweb="tab-list"] {
+  background: rgba(239, 228, 212, 0.82);
+}
+
+html[data-rki-theme="light"] .stTabs [data-baseweb="tab"][aria-selected="true"] {
+  box-shadow: 0 12px 24px rgba(29, 40, 51, 0.12);
+}
+
+html[data-rki-theme="light"] .stTabs [data-baseweb="tab"] {
+  color: rgba(29, 40, 51, 0.72) !important;
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]),
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) {
+  font-family: var(--app-font);
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card,
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .metric-card {
+  background: linear-gradient(180deg, rgba(23, 33, 44, 0.98), rgba(31, 43, 55, 0.94));
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card,
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .metric-card {
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(245, 237, 225, 0.94));
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip,
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip-accent {
+  background: rgba(31, 43, 55, 0.94);
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip,
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip-accent {
+  background: rgba(255, 250, 243, 0.94);
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab-list"] {
+  background: rgba(24, 35, 46, 0.94);
+  border-color: rgba(237, 243, 247, 0.08);
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab-list"] {
+  background: rgba(239, 228, 212, 0.88);
+  border-color: rgba(41, 56, 68, 0.08);
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"] {
+  color: rgba(237, 243, 247, 0.74) !important;
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"] {
+  color: rgba(29, 40, 51, 0.72) !important;
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"][aria-selected="true"] {
+  background: linear-gradient(135deg, #4f9889, #3d7e72) !important;
+  color: #f7fbfc !important;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"][aria-selected="true"] {
+  background: linear-gradient(135deg, #1d5d52, #2c7467) !important;
+  color: #fffaf3 !important;
+  box-shadow: 0 14px 28px rgba(29, 40, 51, 0.14);
+}
+
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
+  border-radius: 16px;
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
+  background: rgba(24, 35, 46, 0.96) !important;
+  border-color: rgba(237, 243, 247, 0.12) !important;
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
+  background: rgba(255, 252, 247, 0.98) !important;
+  border-color: rgba(41, 56, 68, 0.1) !important;
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stButton button[kind="secondary"] {
+  background: rgba(31, 43, 55, 0.96);
+  border-color: rgba(237, 243, 247, 0.1);
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stButton button[kind="secondary"] {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(41, 56, 68, 0.1);
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-red {
+  background: linear-gradient(180deg, rgba(56, 31, 34, 0.94), rgba(78, 41, 45, 0.92));
+}
+
+html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-blue {
+  background: linear-gradient(180deg, rgba(27, 45, 60, 0.94), rgba(38, 58, 75, 0.92));
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-red {
+  background: linear-gradient(180deg, rgba(255, 248, 246, 0.98), rgba(244, 223, 220, 0.98));
+}
+
+html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-blue {
+  background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(221, 232, 241, 0.98));
 }
 
 @media (max-width: 900px) {

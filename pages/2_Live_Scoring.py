@@ -16,7 +16,7 @@ def main() -> None:
     context = ensure_round_focus(build_page_context(store))
     render_section_header(
         "Live Scoring",
-        "Fast in-round entry stays primary here, with one-hole phone entry first and the full-card editor kept as a secondary correction path.",
+        "Quick one-hole entry comes first here. Use the full card editor only when you need to fix an earlier hole.",
     )
     render_chip_row(
         [

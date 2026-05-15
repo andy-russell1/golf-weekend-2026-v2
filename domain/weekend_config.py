@@ -3,19 +3,20 @@ from __future__ import annotations
 from typing import Any
 
 
+TOURNAMENT_NAME = "Russell Kelly Invitational"
 TEAM_ORDER = ("red", "blue")
 
 TEAM_CONFIG: dict[str, dict[str, Any]] = {
     "red": {
-        "name": "Team Red",
-        "short_name": "Red",
+        "name": "Team Kelly",
+        "short_name": "Kelly",
         "color": "#a63a37",
         "soft_color": "#f3dfdd",
         "player_indices": (0, 1),
     },
     "blue": {
-        "name": "Team Blue",
-        "short_name": "Blue",
+        "name": "Team Russell",
+        "short_name": "Russell",
         "color": "#245a84",
         "soft_color": "#dbe9f3",
         "player_indices": (2, 3),
@@ -115,7 +116,7 @@ FIXTURES: tuple[dict[str, Any], ...] = (
 
 DEFAULT_ALLOWANCE_PERCENT = 100
 DEFAULT_SHOW_GROSS_SECONDARY = True
-DEFAULT_WORKBOOK_NAME = "South_Wales_Ryder_Cup_2026_google_sheets_ready_v2"
+DEFAULT_WORKBOOK_NAME = "Russell_Kelly_Invitational_2026_google_sheets_ready_v2"
 
 
 def default_player_names() -> list[str]:
@@ -207,6 +208,14 @@ def build_team_label(team_id: str, player_names: list[str]) -> str:
     team = TEAM_CONFIG[team_id]
     first_idx, second_idx = team["player_indices"]
     return f"{team['name']}: {player_names[first_idx]} + {player_names[second_idx]}"
+
+
+def team_name(team_id: str) -> str:
+    return str(TEAM_CONFIG[team_id]["name"])
+
+
+def team_short_name(team_id: str) -> str:
+    return str(TEAM_CONFIG[team_id]["short_name"])
 
 
 def format_fixture_label(fixture: dict[str, Any]) -> str:

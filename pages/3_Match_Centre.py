@@ -4,8 +4,9 @@ import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
 from components.leaderboard import render_leaderboard, render_match_centre_empty_state
-from support.app_context import build_page_context, ensure_round_focus, fixture_status_text, initialize_page, render_shared_sidebar
 from domain.formatting import format_points
+from domain.weekend_config import team_short_name
+from support.app_context import build_page_context, ensure_round_focus, fixture_status_text, initialize_page, render_shared_sidebar
 
 
 def main() -> None:
@@ -44,9 +45,9 @@ def main() -> None:
     race = context["weekend_race"]
     summary_columns = st.columns(4)
     with summary_columns[0]:
-        render_metric_card("Red Weekend", format_points(race["red_points"]), "overall", tone="red")
+        render_metric_card(f"{team_short_name('red')} Weekend", format_points(race["red_points"]), "overall", tone="red")
     with summary_columns[1]:
-        render_metric_card("Blue Weekend", format_points(race["blue_points"]), "overall", tone="blue")
+        render_metric_card(f"{team_short_name('blue')} Weekend", format_points(race["blue_points"]), "overall", tone="blue")
     with summary_columns[2]:
         render_metric_card("Remaining", format_points(race["remaining_points"]), "points left")
     with summary_columns[3]:
