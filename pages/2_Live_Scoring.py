@@ -52,7 +52,7 @@ def main() -> None:
     with edit_tab:
         render_section_header(
             "Full Scorecard Edit",
-            "Correct a saved hole with tap controls when you need to patch an earlier score.",
+            "Use this as the secondary correction view when you need to patch earlier holes without interrupting the live hole flow.",
         )
         render_full_card_editor(
             course_df=context["course_df"],

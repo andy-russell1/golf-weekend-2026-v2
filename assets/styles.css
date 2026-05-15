@@ -175,15 +175,6 @@ section.main > div {
   background: var(--app-header-bg);
 }
 
-[data-testid="stHeader"] * {
-  color: var(--app-header-ink) !important;
-  fill: var(--app-header-ink) !important;
-}
-
-[data-testid="stToolbar"] {
-  color: var(--app-header-ink);
-}
-
 .hero-card {
   background:
     linear-gradient(135deg, rgba(255, 250, 243, 0.98), rgba(244, 234, 220, 0.96)),

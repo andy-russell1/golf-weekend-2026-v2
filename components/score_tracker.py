@@ -13,9 +13,6 @@ from support.state_helpers import save_players, save_result_payload, save_scores
 from domain.weekend_config import TEAM_CONFIG
 
 
-SCORE_OPTIONS = ["—", *list(range(1, 16))]
-
-
 def render_player_handicap_editor(
     players_rows: list[dict[str, object]],
     round_runtime: dict[str, object],
@@ -105,55 +102,35 @@ def render_full_card_editor(
     player_names = list(round_state["player_names"])
 
     editor_df = round_state["scores"].copy()
+    rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
+
+    display_df = editor_df.rename(columns={"hole": "Hole", "status": "Status", **rename_map})
+    column_config = {
+        "Hole": st.column_config.NumberColumn("Hole", disabled=True, width="small"),
+        "Status": st.column_config.SelectboxColumn("Status", options=["Pending", "In Progress", "Complete"]),
+    }
+    for label in rename_map.values():
+        column_config[label] = st.column_config.NumberColumn(label, min_value=1, max_value=20, step=1)
+    edited = st.data_editor(
+        display_df,
+        width="stretch",
+        hide_index=True,
+        num_rows="fixed",
+        disabled=["Hole"],
+        column_config=column_config,
+        key=f"score_editor::{round_runtime['round_id']}::{format_name}",
+    )
+    persisted = edited.rename(columns={value: key for key, value in rename_map.items()}).rename(columns={"Hole": "hole", "Status": "status"})
     score_columns = list(config["score_columns"])
-    holes = [int(hole) for hole in editor_df["hole"].tolist()]
-    selected_hole = st.selectbox(
-        "Hole to correct",
-        options=holes,
-        index=holes.index(int(round_state["active_hole"])) if int(round_state["active_hole"]) in holes else 0,
-        key=f"full-card-hole::{round_runtime['round_id']}",
-    )
-    current_row = editor_df[editor_df["hole"] == selected_hole].iloc[0]
-    status_value = st.selectbox(
-        "Hole status",
-        options=["Pending", "In Progress", "Complete"],
-        index=["Pending", "In Progress", "Complete"].index(str(current_row["status"])),
-        key=f"full-card-status::{round_runtime['round_id']}::{selected_hole}",
-    )
-
-    entry_values: dict[str, object] = {}
-    for player_index, score_column in enumerate(score_columns):
-        label = player_names[player_index]
-        current_value = current_row[score_column]
-        default = "—" if pd.isna(current_value) else int(current_value)
-        score_row = st.columns([1.1, 1], gap="small")
-        with score_row[0]:
-            st.markdown(f"**{label}**")
-            st.caption("No saved score" if default == "—" else f"Saved gross {default}")
-        with score_row[1]:
-            entry_values[score_column] = st.selectbox(
-                f"{label} score",
-                options=SCORE_OPTIONS,
-                index=SCORE_OPTIONS.index(default) if default in SCORE_OPTIONS else 0,
-                key=f"full-card-score::{round_runtime['round_id']}::{selected_hole}::{score_column}",
-                label_visibility="collapsed",
-            )
-
-    persisted = editor_df.copy()
-    hole_mask = persisted["hole"] == selected_hole
-    persisted.loc[hole_mask, "status"] = status_value
-    for column in score_columns:
-        persisted.loc[hole_mask, column] = pd.NA if entry_values[column] in ("—", None, "") else int(entry_values[column])
+    persisted = persisted[round_state["scores"].columns].copy()
     for column in score_columns:
         persisted[column] = pd.to_numeric(persisted[column], errors="coerce").astype("Int64")
     persisted["status"] = persisted["status"].fillna("Pending").astype(str)
 
-    if status_value == "Pending":
-        persisted.loc[hole_mask, score_columns] = pd.NA
-
-    if st.button("Save Hole Correction", width="stretch", type="primary"):
+    if st.button("Save Full Scorecard", width="stretch"):
         try:
-            save_scores_for_hole(round_runtime, int(selected_hole), persisted, round_state)
+            for hole in persisted["hole"].tolist():
+                save_scores_for_hole(round_runtime, int(hole), persisted, round_state)
             result = compute_round_results(
                 course_df=course_df,
                 format_name=format_name,
@@ -171,11 +148,6 @@ def render_full_card_editor(
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))
-
-    with st.expander("Scorecard snapshot", expanded=False):
-        rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
-        display_df = persisted.rename(columns={"hole": "Hole", "status": "Status", **rename_map})
-        st.dataframe(display_df, width="stretch", hide_index=True)
     return persisted
 
 
