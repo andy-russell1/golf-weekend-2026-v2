@@ -111,6 +111,18 @@ REQUIRED_HEADERS: dict[str, tuple[str, ...]] = {
     "results": RESULTS_HEADERS,
     "settings": SETTINGS_HEADERS,
 }
+SERVICE_ACCOUNT_REQUIRED_FIELDS = (
+    "type",
+    "project_id",
+    "private_key_id",
+    "private_key",
+    "client_email",
+    "client_id",
+    "auth_uri",
+    "token_uri",
+    "auth_provider_x509_cert_url",
+    "client_x509_cert_url",
+)
 
 AUTH_MODE_AUTO = "auto"
 AUTH_MODE_ADC = "adc"
@@ -212,9 +224,32 @@ def _read_secret_mapping(name: str) -> dict[str, Any]:
         return {key: raw[key] for key in raw}
 
 
+def _normalize_private_key(value: str) -> str:
+    normalized = value.replace("\r\n", "\n").replace("\\n", "\n").strip()
+    if normalized and not normalized.endswith("\n"):
+        return f"{normalized}\n"
+    return normalized
+
+
+def _normalize_service_account_secrets(raw: dict[str, Any]) -> dict[str, Any]:
+    if not raw:
+        return {}
+    normalized: dict[str, Any] = {}
+    for key, value in raw.items():
+        if isinstance(value, str):
+            normalized[key] = _normalize_private_key(value) if key == "private_key" else value.strip()
+        else:
+            normalized[key] = value
+    return normalized
+
+
+def _missing_service_account_fields(payload: dict[str, Any]) -> list[str]:
+    return [field for field in SERVICE_ACCOUNT_REQUIRED_FIELDS if not str(payload.get(field) or "").strip()]
+
+
 def get_google_sheets_config() -> GoogleSheetsConfig:
     golf_weekend_secrets = _read_secret_mapping("golf_weekend")
-    service_account_secrets = _read_secret_mapping("gcp_service_account")
+    service_account_secrets = _normalize_service_account_secrets(_read_secret_mapping("gcp_service_account"))
     workbook_name = str(golf_weekend_secrets.get("workbook_name") or os.getenv("GOLF_WEEKEND_WORKBOOK_NAME", DEFAULT_WORKBOOK_NAME)).strip()
     workbook_id = str(golf_weekend_secrets.get("workbook_id") or os.getenv("GOLF_WEEKEND_WORKBOOK_ID", "")).strip()
     service_account_file = Path(os.getenv("GOLF_WEEKEND_SERVICE_ACCOUNT_FILE", "secrets/google_service_account.json"))
@@ -343,9 +378,24 @@ def _cached_workbook(
 def _build_service_account_credentials(config: GoogleSheetsConfig) -> Any:
     if config.service_account_info_json:
         try:
-            return service_account.Credentials.from_service_account_info(json.loads(config.service_account_info_json), scopes=SCOPES)
+            payload = json.loads(config.service_account_info_json)
         except Exception as exc:
-            raise SheetsSetupError("Streamlit service-account secrets could not be read.") from exc
+            raise SheetsSetupError("Streamlit service-account secrets could not be parsed as JSON.") from exc
+        missing_fields = _missing_service_account_fields(payload)
+        if missing_fields:
+            raise SheetsSetupError(
+                "Streamlit service-account secrets are incomplete. Missing fields: "
+                + ", ".join(f"`{field}`" for field in missing_fields)
+                + "."
+            )
+        try:
+            return service_account.Credentials.from_service_account_info(payload, scopes=SCOPES)
+        except Exception as exc:
+            detail = str(exc).strip()
+            hint = "Check `gcp_service_account.private_key`; it must be the full Google PEM key, including the BEGIN/END lines."
+            if detail:
+                raise SheetsSetupError(f"Streamlit service-account secrets could not be read. {hint} Google said: {detail}") from exc
+            raise SheetsSetupError(f"Streamlit service-account secrets could not be read. {hint}") from exc
     if not config.service_account_file.exists():
         raise SheetsSetupError(
             f"Service account file not found at `{config.service_account_file}`. Add the JSON key locally or switch auth mode."

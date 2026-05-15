@@ -104,6 +104,13 @@ The app will seed headers and default rows for `players`, `rounds`, and `setting
 6. Verify players, handicaps, and the four default rounds in `Setup / Admin`.
 7. Save at least one test hole in each format before live use.
 
+## Troubleshooting Streamlit secrets
+
+- If Setup / Admin says `Streamlit service-account secrets could not be read`, the usual problem is `gcp_service_account.private_key`.
+- Paste the full PEM exactly as a TOML multiline string, including `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----`.
+- If your key came from JSON with escaped `\n` line breaks, the app now normalizes that format too, but the full key content still needs to be intact.
+- A workbook lookup failure is a separate issue. If credentials load correctly but the workbook cannot be opened, share the sheet with the `client_email` from the same secret.
+
 ## Notes
 
 - `Stroke Play` and `Skins` are UI labels; both use net better-ball team scoring.
