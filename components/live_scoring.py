@@ -5,14 +5,15 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
+from components.layout import render_chip_row, render_metric_card, render_status_card
 from domain.formatting import format_hole_name, format_relative_to
 from domain.scoring import compute_round_results, get_hole_shots_for_display
-from support.data_loader import get_hole_image, get_hole_record
+from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config, set_active_hole
 from support.state_helpers import save_result_payload, save_scores_for_hole
-from domain.weekend_config import build_team_label
+from domain.weekend_config import team_name
+from support.app_context import compact_team_label_text
 
 
 SCORE_OPTIONS = ["—", *list(range(1, 16))]
@@ -32,6 +33,13 @@ def _status_for_values(values: list[object], required_count: int | None = None) 
     if len(populated) >= target:
         return "Complete"
     return "In Progress"
+
+
+def _score_changed(saved_value: object, entered_value: object) -> bool:
+    saved = None if pd.isna(saved_value) else int(saved_value)
+    entered = _coerce_score(entered_value)
+    current = None if entered is pd.NA else int(entered)
+    return saved != current
 
 
 def _update_scores(
@@ -60,7 +68,7 @@ def _update_scores(
     return updated
 
 
-def _hole_preview(result: dict[str, Any], format_name: str, hole: int) -> list[dict[str, str]]:
+def _hole_preview(result: dict[str, Any], format_name: str, hole: int, player_names: list[str]) -> list[dict[str, str]]:
     if format_name == "Singles":
         previews: list[dict[str, str]] = []
         for match in result.get("matches", []):
@@ -72,7 +80,7 @@ def _hole_preview(result: dict[str, Any], format_name: str, hole: int) -> list[d
                 {
                     "title": match["label"],
                     "status": str(hole_row.get("hole_result", "Pending")),
-                    "support": str(hole_row.get("status_text", "Pending")),
+                    "support": compact_team_label_text(str(hole_row.get("status_text", "Pending")), player_names),
                 }
             )
         return previews
@@ -116,7 +124,7 @@ def _hole_preview(result: dict[str, Any], format_name: str, hole: int) -> list[d
         {
             "title": "Hole Result",
             "status": str(hole_row.get("hole_result", "Pending")),
-            "support": str(hole_row.get("match_status", "Pending")),
+            "support": compact_team_label_text(str(hole_row.get("match_status", "Pending")), player_names),
         }
     ]
 
@@ -151,11 +159,6 @@ def render_live_scoring(
     handicap_indexes = list(round_state["handicap_indexes"])
     player_ids = list(round_state["player_ids"])
 
-    render_section_header(
-        "Live Hole Entry",
-        "Enter one hole at a time, save it straight away, and keep the live state obvious on a phone.",
-    )
-
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     config = get_format_config(format_name)
     active_hole = int(round_state["active_hole"])
@@ -183,40 +186,20 @@ def render_live_scoring(
         render_metric_card("Hole", active_hole, "active")
 
     hole_record = get_hole_record(course, active_hole)
-    hole_image = get_hole_image(course, active_hole)
     hole_name = format_hole_name(hole_record.get("hole_name"), active_hole)
     yardage_key = "yards_white" if round_runtime["tee_label"].lower() == "white" else "yards_yellow"
-
-    header_columns = st.columns([1.25, 0.95], gap="large")
-    with header_columns[0]:
-        st.markdown(f"### {hole_name}")
-        render_chip_row(
-            [
-                course_title,
-                f"Par {hole_record.get('par', '—')}",
-                f"SI {hole_record.get('si', '—')}",
-                f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
-            ]
-        )
-        if hole_image["available"]:
-            st.image(str(hole_image["path"]), use_container_width=True)
-        else:
-            st.caption(hole_image.get("message", "No hole image available"))
-    with header_columns[1]:
-        st.markdown("#### Handicap This Hole")
-        for group in get_hole_shots_for_display(shot_views, active_hole):
-            shot_text = [f"{label}: {shots}" for label, shots in group["shots"].items()]
-            render_chip_row([group["label"], format_relative_to(group["relative_to"]), *shot_text], tone="accent")
-
-        if isinstance(hole_record.get("pro_tip"), str) and hole_record["pro_tip"].strip():
-            st.markdown("#### Tip")
-            st.write(hole_record["pro_tip"].strip())
 
     current_row = round_state["scores"][round_state["scores"]["hole"] == active_hole].iloc[0]
     entry_values: dict[str, object] = {}
 
-    st.markdown("#### Enter Scores")
-    st.caption("Phone-first entry stacks each golfer vertically. Use Full Scorecard Edit only when you need to correct an earlier hole.")
+    render_chip_row(
+        [
+            hole_name,
+            f"Par {hole_record.get('par', '—')}",
+            f"SI {hole_record.get('si', '—')}",
+            f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
+        ]
+    )
     score_columns = list(config["score_columns"])
     defaults = []
     for column in score_columns:
@@ -224,20 +207,30 @@ def render_live_scoring(
         defaults.append("—" if pd.isna(value) else int(value))
     team_groups = (("red", TEAM_A_PLAYERS), ("blue", TEAM_B_PLAYERS))
     for team_id, player_indexes in team_groups:
-        render_chip_row([build_team_label(team_id, player_names)], tone="accent")
+        team_player_names = [player_names[player_index] for player_index in player_indexes]
+        render_status_card(
+            team_name(team_id),
+            " + ".join(team_player_names),
+            "Enter gross scores for this side",
+            tone=team_id,
+        )
         for player_index in player_indexes:
             label = player_names[player_index]
             score_column = score_columns[player_index]
             default = defaults[player_index]
-            saved_text = "No saved score" if default == "—" else f"Saved gross {default}"
-            render_status_card(label, current_row["status"], saved_text, tone=team_id)
-            index = SCORE_OPTIONS.index(default) if default in SCORE_OPTIONS else 0
-            entry_values[score_column] = st.selectbox(
-                f"{label} gross score",
-                options=SCORE_OPTIONS,
-                index=index,
-                key=f"live::{course}::{format_name}::{active_hole}::{label}",
-            )
+            score_row = st.columns([1.1, 1], gap="small")
+            with score_row[0]:
+                st.markdown(f"**{label}**")
+                st.caption("No saved score" if default == "—" else f"Saved gross {default}")
+            with score_row[1]:
+                index = SCORE_OPTIONS.index(default) if default in SCORE_OPTIONS else 0
+                entry_values[score_column] = st.selectbox(
+                    f"{label} gross score",
+                    options=SCORE_OPTIONS,
+                    index=index,
+                    key=f"live::{course}::{format_name}::{active_hole}::{label}",
+                    label_visibility="collapsed",
+                )
 
     preview_scores = _update_scores(
         round_state["scores"],
@@ -262,27 +255,22 @@ def render_live_scoring(
         if tee_rating
         else {}
     )
-    preview_cards = _hole_preview(preview_result, format_name, active_hole)
-    if preview_cards:
-        st.markdown("#### Live Preview")
-        preview_columns = st.columns(len(preview_cards))
-        for column, card in zip(preview_columns, preview_cards):
-            with column:
-                render_status_card(card["title"], card["status"], card["support"])
+    has_unsaved_changes = any(_score_changed(current_row[column], entry_values[column]) for column in score_columns)
+    preview_cards = _hole_preview(preview_result, format_name, active_hole, player_names)
+
+    if st.button("Save + Next", width="stretch", type="primary"):
+        updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
+        try:
+            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
+            st.rerun()
+        except GoogleSheetsError as exc:
+            st.error(str(exc))
 
     if st.button("Save Hole", width="stretch"):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
             _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
-            st.rerun()
-        except GoogleSheetsError as exc:
-            st.error(str(exc))
-
-    if st.button("Save And Next", width="stretch"):
-        updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
-        try:
-            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
-            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))
@@ -317,5 +305,32 @@ def render_live_scoring(
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))
+
+    if has_unsaved_changes and preview_cards:
+        st.markdown("#### Live Preview")
+        preview_columns = st.columns(len(preview_cards))
+        for column, card in zip(preview_columns, preview_cards):
+            with column:
+                render_status_card(card["title"], card["status"], card["support"])
+
+    with st.expander("Hole details", expanded=False):
+        render_chip_row(
+            [
+                course_title,
+                f"Par {hole_record.get('par', '—')}",
+                f"SI {hole_record.get('si', '—')}",
+                f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
+            ]
+        )
+        st.caption("Hole images stay in Course Guide so live scoring stays lighter on phones and lower-memory devices.")
+
+        st.markdown("#### Handicap This Hole")
+        for group in get_hole_shots_for_display(shot_views, active_hole):
+            shot_text = [f"{label}: {shots}" for label, shots in group["shots"].items()]
+            render_chip_row([group["label"], format_relative_to(group["relative_to"]), *shot_text], tone="accent")
+
+        if isinstance(hole_record.get("pro_tip"), str) and hole_record["pro_tip"].strip():
+            st.markdown("#### Tip")
+            st.write(hole_record["pro_tip"].strip())
 
     return {"active_hole": active_hole, "preview_result": preview_result}

@@ -49,74 +49,68 @@ def render_weekend_hub(
 
     next_fixture = _next_fixture(selected_fixture["id"])
     show_progress = int(round_focus["completed_holes"]) > 0
-    focus_columns = st.columns([1.35, 1], gap="large")
-    with focus_columns[0]:
-        render_status_card("Current Round", round_focus["headline"], round_focus["detail"], tone=round_focus["tone"])
-        focus_items = [
-            format_fixture_label(selected_fixture),
-            fixture_formats[selected_fixture["id"]],
-            f"{fixture_tees[selected_fixture['id']]} tees",
-        ]
-        if show_progress:
-            focus_items.append(round_focus["progress_text"])
-        render_chip_row(focus_items, tone="accent")
-        action_columns = st.columns(2)
-        with action_columns[0]:
-            render_page_action(
-                round_focus["primary_page"],
-                round_focus["primary_label"],
-                key=f"hub-primary::{selected_fixture['id']}",
-                primary=True,
-            )
-        with action_columns[1]:
-            render_page_action(
-                round_focus["secondary_page"],
-                round_focus["secondary_label"],
-                key=f"hub-secondary::{selected_fixture['id']}",
-            )
-    with focus_columns[1]:
-        if show_progress:
-            render_status_card("Round Status", round_focus["status_text"], f"Active hole {round_focus['active_hole']}")
-        else:
-            render_status_card(
-                "Selected Round",
-                selected_fixture["title"],
-                f"{fixture_formats[selected_fixture['id']]} • {fixture_tees[selected_fixture['id']]} tees",
-            )
-        if next_fixture is None:
-            render_status_card("What’s Next", "Final fixture selected", "No later tee time remains on the fixture list")
-        else:
-            render_status_card(
-                "What’s Next",
-                next_fixture["title"],
-                f"{fixture_formats[next_fixture['id']]} • {next_fixture['date_label']} • {next_fixture['time_label']}",
-            )
+    render_status_card("Current Round", round_focus["headline"], round_focus["detail"], tone=round_focus["tone"])
+    focus_items = [
+        format_fixture_label(selected_fixture),
+        fixture_formats[selected_fixture["id"]],
+        f"{fixture_tees[selected_fixture['id']]} tees",
+        round_focus["progress_text"],
+    ]
+    if show_progress:
+        focus_items.append(round_focus["status_text"])
+    render_chip_row(focus_items, tone="accent")
+    action_columns = st.columns(2)
+    with action_columns[0]:
+        render_page_action(
+            round_focus["primary_page"],
+            round_focus["primary_label"],
+            key=f"hub-primary::{selected_fixture['id']}",
+            primary=True,
+        )
+    with action_columns[1]:
+        render_page_action(
+            round_focus["secondary_page"],
+            round_focus["secondary_label"],
+            key=f"hub-secondary::{selected_fixture['id']}",
+            primary=round_focus["secondary_page"] == "pages/4_Course_Guide.py",
+        )
 
-    overview_columns = st.columns(4)
-    with overview_columns[0]:
+    if next_fixture is None:
+        render_status_card("What’s Next", "Final fixture selected", "No later tee time remains on the fixture list")
+    else:
+        render_status_card(
+            "What’s Next",
+            next_fixture["title"],
+            f"{fixture_formats[next_fixture['id']]} • {next_fixture['date_label']} • {next_fixture['time_label']}",
+        )
+
+    points_row_one = st.columns(2)
+    with points_row_one[0]:
         render_metric_card("Weekend Points", format_points(weekend_race["red_points"]), team_short_name("red"), tone="red")
-    with overview_columns[1]:
+    with points_row_one[1]:
         render_metric_card("Weekend Points", format_points(weekend_race["blue_points"]), team_short_name("blue"), tone="blue")
-    with overview_columns[2]:
+    points_row_two = st.columns(2)
+    with points_row_two[0]:
         render_metric_card("Remaining", format_points(weekend_race["remaining_points"]), "points available")
-    with overview_columns[3]:
+    with points_row_two[1]:
         render_metric_card("Winning Mark", format_points(weekend_race["winning_target"]), "points to win")
 
-    team_columns = st.columns(2)
-    with team_columns[0]:
-        render_status_card(
-            TEAM_CONFIG["red"]["name"],
-            f"{player_names[0]} + {player_names[1]}",
-            f"Indexes {format_handicap_index(handicap_indexes[0])} / {format_handicap_index(handicap_indexes[1])}",
-            tone="red",
-        )
-    with team_columns[1]:
-        render_status_card(
-            TEAM_CONFIG["blue"]["name"],
-            f"{player_names[2]} + {player_names[3]}",
-            f"Indexes {format_handicap_index(handicap_indexes[2])} / {format_handicap_index(handicap_indexes[3])}",
-            tone="blue",
-        )
+    with st.expander("Teams", expanded=False):
+        team_columns = st.columns(2)
+        with team_columns[0]:
+            render_status_card(
+                TEAM_CONFIG["red"]["name"],
+                f"{player_names[0]} + {player_names[1]}",
+                f"Indexes {format_handicap_index(handicap_indexes[0])} / {format_handicap_index(handicap_indexes[1])}",
+                tone="red",
+            )
+        with team_columns[1]:
+            render_status_card(
+                TEAM_CONFIG["blue"]["name"],
+                f"{player_names[2]} + {player_names[3]}",
+                f"Indexes {format_handicap_index(handicap_indexes[2])} / {format_handicap_index(handicap_indexes[3])}",
+                tone="blue",
+            )
 
     with st.expander("Weekend race detail", expanded=False):
         race_columns = st.columns([1.05, 1.05, 1.35])

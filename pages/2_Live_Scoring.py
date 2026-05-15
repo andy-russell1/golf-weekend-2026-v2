@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
+from components.layout import render_chip_row, render_section_header
 from components.live_scoring import render_live_scoring
 from components.score_tracker import render_full_card_editor, render_round_summary_metrics
-from support.app_context import build_page_context, ensure_round_focus, fixture_status_text, initialize_page, render_shared_sidebar, team_format_label
+from support.app_context import build_page_context, compact_fixture_status_text, ensure_round_focus, initialize_page, render_shared_sidebar, team_format_label
 
 
 def main() -> None:
@@ -24,18 +24,12 @@ def main() -> None:
             context["format_name"],
             f"{context['tee_label']} tees",
             f"Active hole {int(context['round_state']['active_hole'])}",
+            context["round_focus"]["progress_text"],
+            compact_fixture_status_text(context["selected_result"], context["player_names"]),
             team_format_label(context["format_name"], context["scramble_mode"], context["scoring_mode"]),
         ],
         tone="accent",
     )
-
-    summary_columns = st.columns(3)
-    with summary_columns[0]:
-        render_metric_card("Active Hole", int(context["round_state"]["active_hole"]), "shared with course guide")
-    with summary_columns[1]:
-        render_metric_card("Round Progress", context["round_focus"]["progress_text"], None)
-    with summary_columns[2]:
-        render_status_card("Match State", fixture_status_text(context["selected_result"]), "updates with saved holes")
 
     if not context["tee_rating"]:
         st.warning(
@@ -58,7 +52,7 @@ def main() -> None:
     with edit_tab:
         render_section_header(
             "Full Scorecard Edit",
-            "Use this as the secondary correction view when you need to patch earlier holes without interrupting the live hole flow.",
+            "Correct a saved hole with tap controls when you need to patch an earlier score.",
         )
         render_full_card_editor(
             course_df=context["course_df"],

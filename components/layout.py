@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from domain.weekend_config import team_short_name
 
@@ -13,58 +12,6 @@ def load_css(css_path: Path) -> None:
     if not css_path.exists():
         return
     st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
-    components.html(
-        """
-        <script>
-        const parentDoc = window.parent.document;
-        const parentWin = window.parent;
-
-        function parseColorValues(rawColor) {
-          return rawColor && rawColor.match(/[\\d.]+/g);
-        }
-
-        function readThemeProbeColor() {
-          const probe = Array.from(parentDoc.body.querySelectorAll("div")).find((node) => {
-            const style = parentWin.getComputedStyle(node);
-            return style.position === "fixed" && style.pointerEvents === "none" && Number(style.opacity) === 0;
-          });
-
-          if (probe) {
-            return parentWin.getComputedStyle(probe).color;
-          }
-
-          const appView = parentDoc.querySelector('[data-testid="stAppViewContainer"]');
-          if (appView) {
-            return parentWin.getComputedStyle(appView).backgroundColor;
-          }
-
-          return parentWin.getComputedStyle(parentDoc.body).backgroundColor;
-        }
-
-        function setAppTheme() {
-          const probeColor = readThemeProbeColor();
-          const values = parseColorValues(probeColor);
-          if (!values || values.length < 3) {
-            const systemPrefersDark = parentWin.matchMedia("(prefers-color-scheme: dark)").matches;
-            parentDoc.documentElement.setAttribute("data-rki-theme", systemPrefersDark ? "dark" : "light");
-            return;
-          }
-
-          const [r, g, b] = values.slice(0, 3).map(Number);
-          const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-          parentDoc.documentElement.setAttribute("data-rki-theme", luminance < 0.5 ? "dark" : "light");
-        }
-
-        setAppTheme();
-        const observer = new MutationObserver(() => parentWin.requestAnimationFrame(setAppTheme));
-        observer.observe(parentDoc.documentElement, { attributes: true, childList: true, subtree: true });
-        parentWin.addEventListener("storage", () => parentWin.requestAnimationFrame(setAppTheme));
-        parentWin.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => parentWin.requestAnimationFrame(setAppTheme));
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
 
 
 def render_hero(title: str, subtitle: str, meta: str) -> None:

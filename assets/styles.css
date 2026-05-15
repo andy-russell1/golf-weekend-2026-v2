@@ -1,5 +1,5 @@
 :root,
-html[data-rki-theme="light"] {
+html {
   color-scheme: light;
   --app-font: "Avenir Next", "Segoe UI", sans-serif;
   --weight-regular: 400;
@@ -37,42 +37,11 @@ html[data-rki-theme="light"] {
   --gold-soft: #f2e7d0;
 }
 
-html[data-rki-theme="dark"] {
-  color-scheme: dark;
-  --app-font: "Avenir Next", "Segoe UI", sans-serif;
-  --weight-regular: 400;
-  --weight-medium: 400;
-  --weight-semibold: 500;
-  --weight-strong: 600;
-  --ink: #edf3f7;
-  --muted: #a8b4bf;
-  --surface: #0f1720;
-  --surface-strong: #192430;
-  --card: rgba(23, 33, 44, 0.94);
-  --line: rgba(226, 235, 242, 0.12);
-  --shadow: 0 20px 38px rgba(0, 0, 0, 0.34);
-  --app-header-bg: rgba(15, 23, 32, 0.92);
-  --app-header-ink: #edf3f7;
-  --sidebar-bg-start: #15202b;
-  --sidebar-bg-end: #1b2834;
-  --sidebar-ink: #edf3f7;
-  --sidebar-muted: rgba(237, 243, 247, 0.7);
-  --control-bg: rgba(26, 37, 49, 0.96);
-  --control-ink: #edf3f7;
-  --control-muted: #a8b4bf;
-  --control-border: rgba(237, 243, 247, 0.12);
-  --button-bg: rgba(27, 39, 52, 0.96);
-  --button-ink: #edf3f7;
-  --button-primary-bg: #3f8f7f;
-  --button-primary-ink: #f7fbfc;
-  --red: #de8c87;
-  --red-soft: rgba(159, 74, 70, 0.22);
-  --blue: #8eb4d3;
-  --blue-soft: rgba(51, 93, 130, 0.24);
-  --green: #88c4b3;
-  --green-soft: rgba(47, 109, 94, 0.24);
-  --gold: #d8ba7c;
-  --gold-soft: rgba(157, 122, 62, 0.24);
+html,
+body {
+  color-scheme: light !important;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .stApp {
@@ -291,8 +260,12 @@ section.main > div {
 .status-card,
 .fixture-card {
   padding: 0.95rem 1rem;
-  margin-bottom: 0.75rem;
-  min-height: 112px;
+  margin-bottom: 0.65rem;
+}
+
+.metric-card,
+.status-card {
+  min-height: 0;
 }
 
 .metric-card-red,
@@ -570,12 +543,16 @@ section.main > div {
 
 .stButton button[kind="primary"] {
   background: var(--button-primary-bg);
-  color: var(--button-primary-ink);
+  color: var(--button-primary-ink) !important;
   border-color: transparent;
 }
 
-.stButton button[kind="primary"] p {
+.stButton button[kind="primary"] *,
+[data-testid="stSidebar"] button[kind="primary"] *,
+[data-baseweb="tab"][aria-selected="true"] *,
+[data-baseweb="tab"][aria-selected="true"] {
   color: var(--button-primary-ink) !important;
+  fill: var(--button-primary-ink) !important;
 }
 
 .stSelectbox label,
@@ -599,6 +576,10 @@ section.main > div {
 .stTextInput,
 .stNumberInput {
   margin-bottom: 0.35rem;
+}
+
+.stCaption {
+  margin-top: -0.1rem;
 }
 
 [data-baseweb="tab-list"] {
@@ -651,142 +632,44 @@ div[data-testid="stExpander"] {
   background: color-mix(in srgb, var(--card) 68%, transparent);
 }
 
-html[data-rki-theme="dark"] [data-testid="stSidebar"] {
-  border-right-color: rgba(237, 243, 247, 0.06);
-}
-
-html[data-rki-theme="dark"] .hero-card {
-  background:
-    linear-gradient(135deg, rgba(21, 31, 42, 0.98), rgba(28, 40, 53, 0.96)),
-    linear-gradient(90deg, rgba(159, 74, 70, 0.12), rgba(51, 93, 130, 0.12));
-  border-color: rgba(237, 243, 247, 0.08);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.36);
-}
-
-html[data-rki-theme="dark"] .hero-kicker {
-  color: rgba(237, 243, 247, 0.66);
-}
-
-html[data-rki-theme="dark"] .hero-title,
-html[data-rki-theme="dark"] .hero-subtitle,
-html[data-rki-theme="dark"] .hero-meta {
-  color: #f4f7fa;
-}
-
-html[data-rki-theme="dark"] .hero-meta {
-  color: rgba(244, 247, 250, 0.72);
-}
-
-html[data-rki-theme="dark"] .metric-card-neutral,
-html[data-rki-theme="dark"] .status-card-neutral {
-  background: linear-gradient(180deg, rgba(24, 35, 46, 0.96), rgba(31, 43, 55, 0.92));
-  box-shadow: inset 3px 0 0 rgba(168, 180, 191, 0.28), var(--shadow);
-}
-
-html[data-rki-theme="dark"] .badge-success,
-html[data-rki-theme="dark"] .info-chip-accent {
-  background: rgba(27, 39, 52, 0.94);
-  border-color: rgba(142, 180, 211, 0.24);
-}
-
-html[data-rki-theme="dark"] .stTabs [data-baseweb="tab-list"] {
-  background: rgba(25, 36, 48, 0.9);
-}
-
-html[data-rki-theme="dark"] [data-baseweb="tab"][aria-selected="true"] {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
-}
-
-html[data-rki-theme="dark"] [data-testid="stDataFrame"],
-html[data-rki-theme="dark"] [data-testid="stTable"] {
-  background: color-mix(in srgb, var(--card) 90%, transparent);
-}
-
-html[data-rki-theme="dark"] div[data-testid="stExpander"] {
-  background: color-mix(in srgb, var(--card) 82%, transparent);
-}
-
-html[data-rki-theme="dark"] .stButton button,
-html[data-rki-theme="dark"] .stDownloadButton button {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
-}
-
-html[data-rki-theme="dark"] [data-baseweb="select"] > div,
-html[data-rki-theme="dark"] [data-baseweb="input"] > div,
-html[data-rki-theme="dark"] .stTextInput input,
-html[data-rki-theme="dark"] .stNumberInput input,
-html[data-rki-theme="dark"] .stTextArea textarea {
-  background: rgba(25, 36, 48, 0.96) !important;
-}
-
-html[data-rki-theme="dark"] .stTabs [data-baseweb="tab"] {
-  color: rgba(237, 243, 247, 0.74) !important;
-}
-
-html[data-rki-theme="light"] .stTabs [data-baseweb="tab-list"] {
+.stTabs [data-baseweb="tab-list"] {
   background: rgba(239, 228, 212, 0.82);
 }
 
-html[data-rki-theme="light"] .stTabs [data-baseweb="tab"][aria-selected="true"] {
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
   box-shadow: 0 12px 24px rgba(29, 40, 51, 0.12);
 }
 
-html[data-rki-theme="light"] .stTabs [data-baseweb="tab"] {
+.stTabs [data-baseweb="tab"] {
   color: rgba(29, 40, 51, 0.72) !important;
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]),
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) {
   font-family: var(--app-font);
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card,
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .metric-card {
-  background: linear-gradient(180deg, rgba(23, 33, 44, 0.98), rgba(31, 43, 55, 0.94));
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card,
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .metric-card {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card,
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .metric-card {
   background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(245, 237, 225, 0.94));
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip,
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip-accent {
-  background: rgba(31, 43, 55, 0.94);
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip,
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip-accent {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip,
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .chip-row .info-chip-accent {
   background: rgba(255, 250, 243, 0.94);
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab-list"] {
-  background: rgba(24, 35, 46, 0.94);
-  border-color: rgba(237, 243, 247, 0.08);
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab-list"] {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab-list"] {
   background: rgba(239, 228, 212, 0.88);
   border-color: rgba(41, 56, 68, 0.08);
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"] {
-  color: rgba(237, 243, 247, 0.74) !important;
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"] {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"] {
   color: rgba(29, 40, 51, 0.72) !important;
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"][aria-selected="true"] {
-  background: linear-gradient(135deg, #4f9889, #3d7e72) !important;
-  color: #f7fbfc !important;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"][aria-selected="true"] {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stTabs [data-baseweb="tab"][aria-selected="true"] {
   background: linear-gradient(135deg, #1d5d52, #2c7467) !important;
-  color: #fffaf3 !important;
+  color: var(--button-primary-ink) !important;
   box-shadow: 0 14px 28px rgba(29, 40, 51, 0.14);
 }
 
@@ -795,41 +678,22 @@ body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scor
   border-radius: 16px;
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
-  background: rgba(24, 35, 46, 0.96) !important;
-  border-color: rgba(237, 243, 247, 0.12) !important;
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="select"] > div,
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) [data-baseweb="input"] > div {
   background: rgba(255, 252, 247, 0.98) !important;
   border-color: rgba(41, 56, 68, 0.1) !important;
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stButton button[kind="secondary"] {
-  background: rgba(31, 43, 55, 0.96);
-  border-color: rgba(237, 243, 247, 0.1);
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stButton button[kind="secondary"] {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .stButton button[kind="secondary"] {
   background: rgba(255, 255, 255, 0.98);
   border-color: rgba(41, 56, 68, 0.1);
 }
 
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-red {
-  background: linear-gradient(180deg, rgba(56, 31, 34, 0.94), rgba(78, 41, 45, 0.92));
-}
-
-html[data-rki-theme="dark"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-blue {
-  background: linear-gradient(180deg, rgba(27, 45, 60, 0.94), rgba(38, 58, 75, 0.92));
-}
-
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-red {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-red {
   background: linear-gradient(180deg, rgba(255, 248, 246, 0.98), rgba(244, 223, 220, 0.98));
 }
 
-html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-blue {
+body:has([data-testid="stSidebarNavLink"][aria-current="page"][href$="/Live_Scoring"]) .status-card-blue {
   background: linear-gradient(180deg, rgba(250, 252, 255, 0.98), rgba(221, 232, 241, 0.98));
 }
 
@@ -840,7 +704,8 @@ html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-curr
 
   .metric-card,
   .status-card {
-    min-height: 94px;
+    min-height: 0;
+    padding: 0.8rem 0.85rem;
   }
 
   .metric-value,
@@ -853,7 +718,7 @@ html[data-rki-theme="light"] body:has([data-testid="stSidebarNavLink"][aria-curr
   }
 
   .hero-card {
-    padding: 1.15rem 1.1rem;
+    padding: 1rem 0.95rem;
     border-radius: 20px;
   }
 

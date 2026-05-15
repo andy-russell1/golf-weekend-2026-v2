@@ -7,7 +7,7 @@ import streamlit as st
 
 from components.layout import load_css, render_chip_row, render_connection_panel
 from domain.scoring import build_hole_shot_views, compute_round_results, compute_weekend_race
-from domain.weekend_config import FIXTURES, format_fixture_label, get_fixture
+from domain.weekend_config import FIXTURES, build_team_label, format_fixture_label, get_fixture, team_short_name
 from support.data_loader import data_package_exists, get_tee_rating, load_course_data
 from support.paths import ASSETS_ROOT
 from support.session import ensure_ui_state, set_active_hole, set_selected_fixture_id
@@ -70,6 +70,17 @@ def fixture_status_text(result: dict[str, Any]) -> str:
     return "Awaiting scores"
 
 
+def compact_team_label_text(text: str, player_names: list[str]) -> str:
+    compact = str(text)
+    for team_id in ("red", "blue"):
+        compact = compact.replace(build_team_label(team_id, player_names), team_short_name(team_id))
+    return compact
+
+
+def compact_fixture_status_text(result: dict[str, Any], player_names: list[str]) -> str:
+    return compact_team_label_text(fixture_status_text(result), player_names)
+
+
 def _first_incomplete_hole(scores: pd.DataFrame, fallback_hole: int) -> int:
     if scores.empty or "hole" not in scores.columns:
         return fallback_hole
@@ -95,8 +106,8 @@ def build_round_focus(
 
     if not tee_rating:
         return {
-            "headline": "Finish round setup",
-            "detail": f"No tee rating data is available for {round_runtime['tee_label']} tees yet, so scoring stays locked.",
+            "headline": "Setup needed",
+            "detail": f"No tee rating for {round_runtime['tee_label']} tees yet.",
             "status_text": status_text,
             "progress_text": progress_text,
             "primary_label": "Review setup",
@@ -112,8 +123,8 @@ def build_round_focus(
 
     if completed_holes <= 0:
         return {
-            "headline": "Live scoring not started",
-            "detail": f"Start on hole {active_hole} when you are ready. The live match view appears after the first save.",
+            "headline": "Not started",
+            "detail": f"Hole {active_hole} ready",
             "status_text": status_text,
             "progress_text": progress_text,
             "primary_label": "Open live scoring",
@@ -130,7 +141,7 @@ def build_round_focus(
     if completed_holes < total_holes:
         return {
             "headline": "Round in progress",
-            "detail": f"Continue on hole {next_hole}. Match Centre fills in as more holes are saved.",
+            "detail": f"Next hole {next_hole}",
             "status_text": status_text,
             "progress_text": progress_text,
             "primary_label": "Continue live scoring",
@@ -146,7 +157,7 @@ def build_round_focus(
 
     return {
         "headline": "Round complete",
-        "detail": f"{selected_fixture['title']} has all holes saved. Review the result before the next tee time.",
+        "detail": "All holes saved",
         "status_text": status_text,
         "progress_text": progress_text,
         "primary_label": "Review match centre",
@@ -200,7 +211,7 @@ def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
     progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "Round progress unavailable"
     context["round_focus"] = {
         "headline": "Round overview",
-        "detail": "Open Live Scoring to continue the selected round.",
+        "detail": "Open live scoring",
         "status_text": fixture_status_text(selected_result) if isinstance(selected_result, dict) else "Awaiting scores",
         "progress_text": progress_text,
         "primary_label": "Open live scoring",
@@ -248,8 +259,10 @@ def render_shared_sidebar() -> dict[str, Any]:
         completed_holes = int(round_state["scores"]["status"].eq("Complete").sum())
         next_hole = _first_incomplete_hole(round_state["scores"], int(round_state["active_hole"]))
 
-        render_connection_panel(store["persistence"]["status"], compact=True)
-        st.caption("Use the sidebar to move around. The selected round stays in sync across each page.")
+        connection_status = store["persistence"]["status"]
+        if str(connection_status.get("state", "")) != "connected":
+            render_connection_panel(connection_status, compact=True)
+        st.caption("Selected round stays in sync across the app.")
         st.markdown(f"**{selected_fixture['title']}**")
         st.caption(f"{round_runtime['format_name']} • {round_runtime['tee_label']} tees")
         st.caption(f"Active hole {int(round_state['active_hole'])} • Next to score {next_hole} • Completed {completed_holes}")
