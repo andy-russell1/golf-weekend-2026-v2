@@ -46,7 +46,7 @@ def render_hole_explorer(
         st.markdown(f"### {hole_name}")
         render_chip_row([f"Par {hole_record.get('par', '—')}", f"SI {hole_record.get('si', '—')}", difficulty])
     with header_columns[1]:
-        open_live_scoring = st.button("Open In Live Scoring", use_container_width=True)
+        open_live_scoring = st.button("Open In Live Scoring", width="stretch")
 
     metric_columns = st.columns(4)
     metric_values = [

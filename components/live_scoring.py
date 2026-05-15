@@ -156,7 +156,7 @@ def render_live_scoring(
 
     nav_columns = st.columns([0.8, 1.4, 0.8, 1.2])
     with nav_columns[0]:
-        if st.button("Previous", use_container_width=True, disabled=active_hole == holes[0]):
+        if st.button("Previous", width="stretch", disabled=active_hole == holes[0]):
             set_active_hole(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)])
             st.rerun()
     with nav_columns[1]:
@@ -165,7 +165,7 @@ def render_live_scoring(
             set_active_hole(round_runtime["round_id"], int(selected_hole))
             active_hole = int(selected_hole)
     with nav_columns[2]:
-        if st.button("Next", use_container_width=True, disabled=active_hole == holes[-1]):
+        if st.button("Next", width="stretch", disabled=active_hole == holes[-1]):
             set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
             st.rerun()
     with nav_columns[3]:
@@ -254,7 +254,7 @@ def render_live_scoring(
 
     action_columns = st.columns(3)
     with action_columns[0]:
-        if st.button("Save Hole", use_container_width=True):
+        if st.button("Save Hole", width="stretch"):
             updated_scores = _update_scores(
                 round_state["scores"], active_hole, format_name=format_name, values=entry_values
             )
@@ -266,7 +266,7 @@ def render_live_scoring(
             except GoogleSheetsError as exc:
                 st.error(str(exc))
     with action_columns[1]:
-        if st.button("Save And Next", use_container_width=True):
+        if st.button("Save And Next", width="stretch"):
             updated_scores = _update_scores(
                 round_state["scores"], active_hole, format_name=format_name, values=entry_values
             )
@@ -279,7 +279,7 @@ def render_live_scoring(
             except GoogleSheetsError as exc:
                 st.error(str(exc))
     with action_columns[2]:
-        if st.button("Mark Pending", use_container_width=True):
+        if st.button("Mark Pending", width="stretch"):
             updated_scores = _update_scores(
                 round_state["scores"],
                 active_hole,

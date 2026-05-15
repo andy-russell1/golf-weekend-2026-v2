@@ -7,7 +7,7 @@
 
 This file defines how AI coding agents should operate in this repository.
 
-The repository contains a React-based proof-of-concept golf weekend app. The app is designed for a small real-world user group and should remain practical, structured, and credible without becoming overengineered.
+The repository contains a Streamlit-based golf weekend app. The app is designed for a small real-world user group and should remain practical, structured, and credible without becoming overengineered.
 
 ## Core Mission
 
@@ -34,7 +34,7 @@ The first build phases have covered:
 2. frontend architecture
 3. data / state / logic model
 4. golf scoring logic
-5. initial React UI implementation
+5. initial Streamlit UI implementation
 
 Upcoming work is expected to focus on:
 
@@ -62,7 +62,7 @@ If changing structure, do so deliberately and minimally.
 
 ### 3. Keep UI and business logic separate
 
-Golf rules, handicap logic, scoring, standings, and derived calculations must not be embedded directly inside presentational React components unless trivial.
+Golf rules, handicap logic, scoring, standings, and derived calculations must not be embedded directly inside presentational UI code unless trivial.
 
 Prefer dedicated domain modules.
 
@@ -71,7 +71,7 @@ Prefer dedicated domain modules.
 Prefer:
 
 - small components
-- focused hooks
+- focused state helpers
 - isolated domain logic
 - readable utilities
 
@@ -128,12 +128,12 @@ Agents should optimise for real use during the trip, not for generic demo flash.
 
 Agents should generally preserve or improve the following separation:
 
-- **pages/routes**: high-level view composition
+- **pages**: high-level Streamlit view composition
 - **components**: reusable presentational or view-level UI units
-- **hooks/state**: interactive and stateful behaviour
+- **state/support**: session state, app context, and interactive behaviour
 - **domain logic**: scoring, handicaps, standings, formats
 - **data/services**: loading, persistence, transformation
-- **types/config**: schemas, constants, config models
+- **config/models**: constants, configuration, and data-shape definitions
 
 Do not collapse these layers together without strong justification.
 

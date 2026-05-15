@@ -10,14 +10,13 @@ from domain.scoring import build_hole_shot_views, compute_round_results, compute
 from domain.weekend_config import FIXTURES, format_fixture_label, get_fixture
 from support.data_loader import data_package_exists, get_tee_rating, load_course_data
 from support.paths import ASSETS_ROOT
-from support.session import ensure_ui_state, set_active_hole
+from support.session import ensure_ui_state, set_active_hole, set_selected_fixture_id
 from support.state_helpers import (
     build_round_state,
     get_round_runtime,
     load_app_store,
     load_saved_results,
     round_row_map,
-    save_setting,
     selected_fixture_id_for_ui,
 )
 
@@ -95,7 +94,7 @@ def render_shared_sidebar() -> dict[str, Any]:
             format_func=lambda fixture_id: format_fixture_label(get_fixture(fixture_id)),
         )
         if selected_fixture_id != current_fixture_id:
-            save_setting("selected_fixture_id", selected_fixture_id)
+            set_selected_fixture_id(selected_fixture_id)
             st.rerun()
 
         selected_fixture = get_fixture(selected_fixture_id)
@@ -127,7 +126,7 @@ def render_page_links(current_page: str) -> None:
             with column:
                 if label == current_page:
                     st.caption("Current page")
-                st.page_link(path, label=label, use_container_width=True)
+                st.page_link(path, label=label, width="stretch")
 
 
 def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]:

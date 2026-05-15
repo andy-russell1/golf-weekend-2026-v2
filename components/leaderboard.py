@@ -99,17 +99,17 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                             "Match Status",
                         ]
                     ].rename(columns={"hole": "Hole", "par": "Par", "si": "SI"}),
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
         if isinstance(result.get("player_totals"), pd.DataFrame) and not result["player_totals"].empty:
             st.markdown("#### Player Totals")
-            st.dataframe(_format_total_table(result["player_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["player_totals"]), width="stretch", hide_index=True)
 
         if isinstance(result.get("team_totals"), pd.DataFrame) and not result["team_totals"].empty:
             st.markdown("#### Team Totals")
-            st.dataframe(_format_total_table(result["team_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["team_totals"]), width="stretch", hide_index=True)
     elif result["format_name"] == "Stroke Play":
         stroke_play = result.get("stroke_play", {})
         headline_columns = st.columns(3)
@@ -122,11 +122,11 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
 
         if "player_totals" in result and isinstance(result["player_totals"], pd.DataFrame) and not result["player_totals"].empty:
             st.markdown("#### Player Totals")
-            st.dataframe(_format_total_table(result["player_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["player_totals"]), width="stretch", hide_index=True)
 
         if "team_totals" in result and isinstance(result["team_totals"], pd.DataFrame) and not result["team_totals"].empty:
             st.markdown("#### Team Totals")
-            st.dataframe(_format_total_table(result["team_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["team_totals"]), width="stretch", hide_index=True)
 
         with st.expander("Stroke play hole-by-hole", expanded=False):
             score_columns = [
@@ -156,7 +156,7 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "hole_result": "Hole Result",
                     }
                 ),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
     elif result["format_name"] == "Skins":
@@ -173,11 +173,11 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
 
         if "player_totals" in result and isinstance(result["player_totals"], pd.DataFrame) and not result["player_totals"].empty:
             st.markdown("#### Player Totals")
-            st.dataframe(_format_total_table(result["player_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["player_totals"]), width="stretch", hide_index=True)
 
         if "team_totals" in result and isinstance(result["team_totals"], pd.DataFrame) and not result["team_totals"].empty:
             st.markdown("#### Team Totals")
-            st.dataframe(_format_total_table(result["team_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["team_totals"]), width="stretch", hide_index=True)
 
         with st.expander("Skins hole-by-hole", expanded=False):
             score_columns = [
@@ -213,7 +213,7 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "hole_result": "Hole Result",
                     }
                 ),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
     else:
@@ -237,11 +237,11 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
 
         if "player_totals" in result and isinstance(result["player_totals"], pd.DataFrame) and not result["player_totals"].empty:
             st.markdown("#### Player Totals")
-            st.dataframe(_format_total_table(result["player_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["player_totals"]), width="stretch", hide_index=True)
 
         if "team_totals" in result and isinstance(result["team_totals"], pd.DataFrame) and not result["team_totals"].empty:
             st.markdown("#### Team Totals")
-            st.dataframe(_format_total_table(result["team_totals"]), use_container_width=True, hide_index=True)
+            st.dataframe(_format_total_table(result["team_totals"]), width="stretch", hide_index=True)
 
         st.caption("Hole outcomes are decided by best net ball. Gross best ball can still be reviewed below.")
         detail = result["summary_df"].copy()
@@ -275,7 +275,7 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
                         "team_b_best_gross": "Blue Best Gross",
                     }
                 ),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 

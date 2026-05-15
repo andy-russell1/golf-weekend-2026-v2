@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -121,8 +122,6 @@ def _coerce_schema(df: pd.DataFrame, required_columns: tuple[str, ...]) -> pd.Da
 
 @st.cache_data(show_spinner=False)
 def _read_csv(path: str, required_columns: tuple[str, ...]) -> pd.DataFrame:
-    from pathlib import Path
-
     file_path = Path(path)
     if not file_path.exists():
         return _empty_dataframe(required_columns)

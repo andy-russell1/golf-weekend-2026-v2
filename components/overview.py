@@ -78,7 +78,7 @@ def render_playing_handicap_summary(
     display["Allowance"] = display["Allowance"].apply(lambda value: f"{int(float(value) * 100)}%")
     st.dataframe(
         display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -100,7 +100,7 @@ def render_course_scorecard(course: str, tee_label: str) -> None:
         }
     )
     st.markdown("#### Scorecard")
-    st.dataframe(preview[["Hole", selected_yard_label, "SI"]], use_container_width=True, hide_index=True)
+    st.dataframe(preview[["Hole", selected_yard_label, "SI"]], width="stretch", hide_index=True)
 
 
 def render_course_overview(

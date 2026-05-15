@@ -59,7 +59,7 @@ def render_player_handicap_editor(
         allowance=int(round_runtime["allowance_percent"]) / 100,
     )
 
-    if st.button("Save Players And Handicaps", use_container_width=True):
+    if st.button("Save Players And Handicaps", width="stretch"):
         try:
             save_players(editor_rows)
             st.rerun()
@@ -72,7 +72,7 @@ def render_player_handicap_editor(
         handicap_display["Allowance"] = handicap_display["Allowance"].apply(lambda value: f"{int(value * 100)}%")
         st.dataframe(
             handicap_display[["Player", "Team", "Handicap Index", "Course Handicap", "Playing Handicap", "Allowance"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
     else:
@@ -103,7 +103,7 @@ def render_full_card_editor(
         column_config[label] = st.column_config.NumberColumn(label, min_value=1, max_value=20, step=1)
     edited = st.data_editor(
         display_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         num_rows="fixed",
         disabled=["Hole"],
@@ -117,7 +117,7 @@ def render_full_card_editor(
         persisted[column] = pd.to_numeric(persisted[column], errors="coerce").astype("Int64")
     persisted["status"] = persisted["status"].fillna("Pending").astype(str)
 
-    if st.button("Save Full Scorecard", use_container_width=True):
+    if st.button("Save Full Scorecard", width="stretch"):
         try:
             for hole in persisted["hole"].tolist():
                 save_scores_for_hole(round_runtime, int(hole), persisted, round_state)

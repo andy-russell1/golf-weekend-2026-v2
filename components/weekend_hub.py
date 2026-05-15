@@ -115,18 +115,18 @@ def render_weekend_hub(
     points_table = race["points_table"].copy()
     for team_label in ("Red", "Blue", "Points Available"):
         points_table[team_label] = points_table[team_label].apply(format_points)
-    st.dataframe(points_table, use_container_width=True, hide_index=True)
+    st.dataframe(points_table, width="stretch", hide_index=True)
 
     st.markdown("#### Quick Links")
     link_columns = st.columns(4)
     with link_columns[0]:
-        st.page_link("pages/2_Live_Scoring.py", label="Live Scoring", use_container_width=True)
+        st.page_link("pages/2_Live_Scoring.py", label="Live Scoring", width="stretch")
     with link_columns[1]:
-        st.page_link("pages/3_Match_Centre.py", label="Match Centre", use_container_width=True)
+        st.page_link("pages/3_Match_Centre.py", label="Match Centre", width="stretch")
     with link_columns[2]:
-        st.page_link("pages/4_Course_Guide.py", label="Course Guide", use_container_width=True)
+        st.page_link("pages/4_Course_Guide.py", label="Course Guide", width="stretch")
     with link_columns[3]:
-        st.page_link("pages/5_Setup_Admin.py", label="Setup / Admin", use_container_width=True)
+        st.page_link("pages/5_Setup_Admin.py", label="Setup / Admin", width="stretch")
 
     st.markdown("#### Fixtures")
     fixture_columns = st.columns(2)

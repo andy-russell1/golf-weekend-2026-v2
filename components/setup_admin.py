@@ -76,7 +76,7 @@ def render_setup_admin(
                 if auth_mode == "service_account"
                 else "Run Desktop OAuth"
             )
-            if st.button(button_label, use_container_width=True):
+            if st.button(button_label, width="stretch"):
                 try:
                     if auth_mode == "oauth_desktop":
                         get_credentials(interactive=True)
@@ -85,7 +85,7 @@ def render_setup_admin(
                 except GoogleSheetsError as exc:
                     st.error(str(exc))
         with action_columns[1]:
-            if st.button("Refresh Workbook", use_container_width=True):
+            if st.button("Refresh Workbook", width="stretch"):
                 refresh_sheet_caches()
                 st.rerun()
 
@@ -108,7 +108,7 @@ def render_setup_admin(
         with control_columns[1]:
             show_gross_secondary_value = st.toggle("Show Gross Best Ball In Match Centre", value=show_gross_secondary)
 
-        if st.button("Save Round Setup", use_container_width=True):
+        if st.button("Save Round Setup", width="stretch"):
             payload = {
                 "round_order": round_runtime.get("round_order", selected_fixture.get("round_order", 0)),
                 "title": selected_fixture["title"],
@@ -162,6 +162,6 @@ def render_setup_admin(
             persistence["mode"].capitalize(),
             "Google Sheets is preferred; local session fallback remains available if the workbook is not connected.",
         )
-        if st.button("Reset Selected Round", use_container_width=True):
+        if st.button("Reset Selected Round", width="stretch"):
             clear_round(fixture_id)
             st.rerun()
