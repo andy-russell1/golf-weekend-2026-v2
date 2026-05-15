@@ -4,7 +4,7 @@ import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
 from components.leaderboard import render_leaderboard, render_match_centre_empty_state
-from support.app_context import build_page_context, fixture_status_text, initialize_page, render_shared_sidebar
+from support.app_context import build_page_context, ensure_round_focus, fixture_status_text, initialize_page, render_shared_sidebar
 from domain.formatting import format_points
 
 
@@ -13,7 +13,7 @@ def main() -> None:
         return
 
     store = render_shared_sidebar()
-    context = build_page_context(store)
+    context = ensure_round_focus(build_page_context(store))
     render_section_header(
         "Match Centre",
         "Live match state, momentum, totals, and weekend points impact for the selected fixture, with the current answer first.",

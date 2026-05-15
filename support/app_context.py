@@ -162,6 +162,59 @@ def build_round_focus(
     }
 
 
+def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
+    if context.get("round_focus"):
+        return context
+
+    selected_fixture = context.get("selected_fixture")
+    round_runtime = context.get("round_runtime")
+    round_state = context.get("round_state")
+    selected_result = context.get("selected_result")
+
+    if (
+        isinstance(selected_fixture, dict)
+        and isinstance(round_runtime, dict)
+        and isinstance(round_state, dict)
+        and isinstance(selected_result, dict)
+    ):
+        context["round_focus"] = build_round_focus(
+            selected_fixture=selected_fixture,
+            round_runtime=round_runtime,
+            round_state=round_state,
+            selected_result=selected_result,
+            tee_rating=context.get("tee_rating", {}),
+        )
+        return context
+
+    active_hole = 1
+    scores = None
+    if isinstance(round_state, dict):
+        active_hole = int(round_state.get("active_hole", 1) or 1)
+        maybe_scores = round_state.get("scores")
+        if isinstance(maybe_scores, pd.DataFrame):
+            scores = maybe_scores
+
+    completed_holes = int(scores["status"].eq("Complete").sum()) if scores is not None and "status" in scores.columns else 0
+    total_holes = len(scores.index) if scores is not None else 0
+    progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "Round progress unavailable"
+    context["round_focus"] = {
+        "headline": "Round overview",
+        "detail": "Open Live Scoring to continue the selected round.",
+        "status_text": fixture_status_text(selected_result) if isinstance(selected_result, dict) else "Awaiting scores",
+        "progress_text": progress_text,
+        "primary_label": "Open live scoring",
+        "primary_page": "pages/2_Live_Scoring.py",
+        "secondary_label": "Open weekend hub",
+        "secondary_page": "app.py",
+        "tone": "blue",
+        "completed_holes": completed_holes,
+        "total_holes": total_holes,
+        "active_hole": active_hole,
+        "next_hole": _first_incomplete_hole(scores, active_hole) if scores is not None else active_hole,
+    }
+    return context
+
+
 def render_shared_sidebar() -> dict[str, Any]:
     store = load_app_store()
     weekend_state = store["weekend_state"]
@@ -279,7 +332,8 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
     set_active_hole(selected_fixture_id, int(round_state["active_hole"]))
     saved_results = load_saved_results(snapshot=snapshot)
 
-    return {
+    return ensure_round_focus(
+        {
         "store": store,
         "persistence": store["persistence"],
         "weekend_state": weekend_state,
@@ -306,4 +360,5 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         "shot_views": shot_views,
         "weekend_race": compute_weekend_race(results_by_fixture),
         "round_rows_by_id": round_row_map(store["round_rows"]),
-    }
+        }
+    )

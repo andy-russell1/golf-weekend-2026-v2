@@ -4,6 +4,7 @@ from components.layout import render_chip_row, render_hero
 from components.weekend_hub import render_weekend_hub
 from support.app_context import (
     build_page_context,
+    ensure_round_focus,
     initialize_page,
     render_shared_sidebar,
     team_format_label,
@@ -15,7 +16,7 @@ def main() -> None:
         return
 
     store = render_shared_sidebar()
-    context = build_page_context(store)
+    context = ensure_round_focus(build_page_context(store))
     selected_fixture = context["selected_fixture"]
     subtitle = f"{selected_fixture['title']} • {selected_fixture['date_label']} {selected_fixture['time_label']}"
     meta = f"{context['format_name']} • {context['tee_label']} tees • {team_format_label(context['format_name'], context['scramble_mode'], context['scoring_mode'])}"

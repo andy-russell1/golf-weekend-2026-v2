@@ -5,7 +5,7 @@ import streamlit as st
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
 from components.live_scoring import render_live_scoring
 from components.score_tracker import render_full_card_editor, render_round_summary_metrics
-from support.app_context import build_page_context, fixture_status_text, initialize_page, render_shared_sidebar, team_format_label
+from support.app_context import build_page_context, ensure_round_focus, fixture_status_text, initialize_page, render_shared_sidebar, team_format_label
 
 
 def main() -> None:
@@ -13,7 +13,7 @@ def main() -> None:
         return
 
     store = render_shared_sidebar()
-    context = build_page_context(store)
+    context = ensure_round_focus(build_page_context(store))
     render_section_header(
         "Live Scoring",
         "Fast in-round entry stays primary here, with one-hole phone entry first and the full-card editor kept as a secondary correction path.",
