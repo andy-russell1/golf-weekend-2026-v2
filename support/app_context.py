@@ -194,7 +194,9 @@ def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
         if isinstance(maybe_scores, pd.DataFrame):
             scores = maybe_scores
 
-    completed_holes = int(scores["status"].eq("Complete").sum()) if scores is not None and "status" in scores.columns else 0
+    completed_holes = (
+        int(scores["status"].eq("Complete").sum()) if scores is not None and "status" in scores.columns else 0
+    )
     total_holes = len(scores.index) if scores is not None else 0
     progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "Round progress unavailable"
     context["round_focus"] = {
@@ -334,31 +336,31 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
 
     return ensure_round_focus(
         {
-        "store": store,
-        "persistence": store["persistence"],
-        "weekend_state": weekend_state,
-        "selected_fixture": selected_fixture,
-        "round_runtime": round_runtime,
-        "format_name": round_runtime["format_name"],
-        "tee_label": round_runtime["tee_label"],
-        "allowance_percent": round_runtime["allowance_percent"],
-        "scramble_mode": round_runtime["scramble_mode"],
-        "scoring_mode": round_runtime["scoring_mode"],
-        "stableford_mode": round_runtime["stableford_mode"],
-        "course": course,
-        "course_df": course_df,
-        "holes": holes,
-        "round_state": round_state,
-        "tee_rating": tee_rating,
-        "player_names": player_names,
-        "player_ids": list(round_state["player_ids"]),
-        "handicap_indexes": handicap_indexes,
-        "selected_result": selected_result,
-        "round_focus": round_focus,
-        "results_by_fixture": results_by_fixture,
-        "saved_results": saved_results,
-        "shot_views": shot_views,
-        "weekend_race": compute_weekend_race(results_by_fixture),
-        "round_rows_by_id": round_row_map(store["round_rows"]),
+            "store": store,
+            "persistence": store["persistence"],
+            "weekend_state": weekend_state,
+            "selected_fixture": selected_fixture,
+            "round_runtime": round_runtime,
+            "format_name": round_runtime["format_name"],
+            "tee_label": round_runtime["tee_label"],
+            "allowance_percent": round_runtime["allowance_percent"],
+            "scramble_mode": round_runtime["scramble_mode"],
+            "scoring_mode": round_runtime["scoring_mode"],
+            "stableford_mode": round_runtime["stableford_mode"],
+            "course": course,
+            "course_df": course_df,
+            "holes": holes,
+            "round_state": round_state,
+            "tee_rating": tee_rating,
+            "player_names": player_names,
+            "player_ids": list(round_state["player_ids"]),
+            "handicap_indexes": handicap_indexes,
+            "selected_result": selected_result,
+            "round_focus": round_focus,
+            "results_by_fixture": results_by_fixture,
+            "saved_results": saved_results,
+            "shot_views": shot_views,
+            "weekend_race": compute_weekend_race(results_by_fixture),
+            "round_rows_by_id": round_row_map(store["round_rows"]),
         }
     )
