@@ -6,11 +6,20 @@ import streamlit as st
 
 from components.layout import render_chip_row, render_connection_panel, render_metric_card, render_section_header, render_status_card
 from components.score_tracker import render_player_handicap_editor, render_round_summary_metrics
+from domain.bonus_competitions import (
+    BONUS_COMPETITIONS_SETTING_KEY,
+    bonus_competitions_to_json,
+    competition_hole_label,
+    eligible_holes,
+    normalize_bonus_competitions,
+)
+from support.data_loader import load_course_data
 from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
 from support.google_sheets import get_credentials, get_google_sheets_config, refresh_sheet_caches
 from support.state_helpers import clear_round, save_round_config, save_setting
 from domain.weekend_config import (
+    FIXTURES,
     SINGLES_MATCHUPS_SETTING_KEY,
     TEAM_CONFIG,
     format_fixture_label,
@@ -34,6 +43,93 @@ def _match_player_for_team(match: dict[str, Any], team_id: str, fallback: int) -
     return fallback
 
 
+def _fixture_label(fixture_id: str) -> str:
+    fixture = next((candidate for candidate in FIXTURES if candidate["id"] == fixture_id), FIXTURES[0])
+    return format_fixture_label(fixture)
+
+
+def _fixture_for_round_id(round_id: str) -> dict[str, Any]:
+    return next((candidate for candidate in FIXTURES if candidate["id"] == round_id), FIXTURES[0])
+
+
+def _render_bonus_competition_editor(
+    bonus_competitions: list[dict[str, Any]],
+    fixture_tees: dict[str, str],
+) -> None:
+    st.caption("These are weekend-level bonus points. Each competition is configured once for the whole trip.")
+    edited_competitions: list[dict[str, Any]] = []
+    fixture_ids = [fixture["id"] for fixture in FIXTURES]
+
+    for competition in normalize_bonus_competitions(bonus_competitions):
+        st.markdown(f"#### {competition['label']}")
+        current_round_id = str(competition.get("round_id") or fixture_ids[0])
+        if current_round_id not in fixture_ids:
+            current_round_id = fixture_ids[0]
+
+        columns = st.columns([1.0, 1.45, 1.45])
+        with columns[0]:
+            enabled = st.toggle(
+                "Enabled",
+                value=bool(competition.get("enabled", True)),
+                key=f"bonus-enabled::{competition['id']}",
+            )
+            point_value = st.number_input(
+                "Point value",
+                min_value=0.0,
+                max_value=5.0,
+                value=float(competition.get("point_value") or 1.0),
+                step=0.5,
+                key=f"bonus-points::{competition['id']}",
+            )
+        with columns[1]:
+            selected_round_id = st.selectbox(
+                "Round",
+                options=fixture_ids,
+                index=fixture_ids.index(current_round_id),
+                format_func=_fixture_label,
+                key=f"bonus-round::{competition['id']}",
+            )
+        selected_fixture = _fixture_for_round_id(selected_round_id)
+        tee_label = fixture_tees.get(selected_round_id, selected_fixture["default_tee"])
+        course_df = load_course_data(selected_fixture["course"])
+        eligible = eligible_holes(course_df, str(competition["type"]), tee_label=tee_label)
+        hole_options = [int(hole) for hole in eligible["hole"].dropna().tolist()]
+        if not hole_options:
+            hole_options = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+        current_hole = int(competition.get("hole") or hole_options[0])
+        if current_hole not in hole_options:
+            current_hole = hole_options[0]
+
+        with columns[2]:
+            selected_hole = st.selectbox(
+                "Hole",
+                options=hole_options,
+                index=hole_options.index(current_hole),
+                format_func=lambda hole: competition_hole_label(
+                    eligible[eligible["hole"].eq(hole)].iloc[0].to_dict()
+                    if not eligible[eligible["hole"].eq(hole)].empty
+                    else course_df[course_df["hole"].eq(hole)].iloc[0].to_dict(),
+                    tee_label=tee_label,
+                ),
+                key=f"bonus-hole::{competition['id']}",
+            )
+
+        edited_competitions.append(
+            {
+                **competition,
+                "round_id": selected_round_id,
+                "course": selected_fixture["course"],
+                "hole": int(selected_hole),
+                "point_value": float(point_value),
+                "enabled": bool(enabled),
+            }
+        )
+
+    if st.button("Save Bonus Competitions", width="stretch"):
+        save_setting(BONUS_COMPETITIONS_SETTING_KEY, bonus_competitions_to_json(edited_competitions))
+        st.rerun()
+
+
 def render_setup_admin(
     selected_fixture: dict[str, Any],
     persistence: dict[str, Any],
@@ -44,6 +140,8 @@ def render_setup_admin(
     tee_rating: dict[str, Any],
     players_rows: list[dict[str, Any]],
     singles_matchups: list[dict[str, Any]],
+    bonus_competitions: list[dict[str, Any]],
+    fixture_tees: dict[str, str],
 ) -> None:
     fixture_id = selected_fixture["id"]
     format_name = round_runtime["format_name"]
@@ -64,7 +162,9 @@ def render_setup_admin(
         tone="accent",
     )
 
-    setup_tab, players_tab, connection_tab, admin_tab = st.tabs(["Round Setup", "Players & Handicaps", "Connection", "Admin Actions"])
+    setup_tab, bonus_tab, players_tab, connection_tab, admin_tab = st.tabs(
+        ["Round Setup", "Bonus Points", "Players & Handicaps", "Connection", "Admin Actions"]
+    )
 
     with connection_tab:
         render_connection_panel(persistence["status"], compact=False)
@@ -213,6 +313,9 @@ def render_setup_admin(
                 "Ready",
                 "Handicap, shot allocation, and round result calculations are active for the selected round.",
             )
+
+    with bonus_tab:
+        _render_bonus_competition_editor(bonus_competitions, fixture_tees)
 
     with players_tab:
         st.caption("Keep labels explicit here so names and playing handicaps stay readable on a phone during the round.")

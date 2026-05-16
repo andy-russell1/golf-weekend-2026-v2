@@ -142,7 +142,10 @@ def _result_points_available(result: dict[str, Any], fallback_format: str) -> fl
     return points_available_for_format(str(result.get("format_name") or fallback_format))
 
 
-def compute_weekend_points(results_by_fixture: dict[str, dict[str, Any]]) -> pd.DataFrame:
+def compute_weekend_points(
+    results_by_fixture: dict[str, dict[str, Any]],
+    bonus_rows: list[dict[str, Any]] | None = None,
+) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     totals = {"red": 0.0, "blue": 0.0}
 
@@ -161,23 +164,28 @@ def compute_weekend_points(results_by_fixture: dict[str, dict[str, Any]]) -> pd.
             }
         )
 
+    rows.extend(bonus_rows or [])
     rows.append(
         {
             "Fixture": "Weekend Total",
             "Format": "Overall",
-            "Red": totals["red"],
-            "Blue": totals["blue"],
+            "Red": totals["red"] + sum(float(row.get("Red", 0.0) or 0.0) for row in bonus_rows or []),
+            "Blue": totals["blue"] + sum(float(row.get("Blue", 0.0) or 0.0) for row in bonus_rows or []),
             "Points Available": sum(
                 _result_points_available(results_by_fixture.get(fixture["id"], {}), fixture["default_format"])
                 for fixture in FIXTURES
-            ),
+            )
+            + sum(float(row.get("Points Available", 0.0) or 0.0) for row in bonus_rows or []),
         }
     )
     return pd.DataFrame(rows)
 
 
-def compute_weekend_race(results_by_fixture: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    points_table = compute_weekend_points(results_by_fixture)
+def compute_weekend_race(
+    results_by_fixture: dict[str, dict[str, Any]],
+    bonus_rows: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    points_table = compute_weekend_points(results_by_fixture, bonus_rows=bonus_rows)
     awarded_rows = points_table.iloc[:-1].copy()
     total_available = float(awarded_rows["Points Available"].sum()) if not awarded_rows.empty else 0.0
     red_points = float(awarded_rows["Red"].sum()) if not awarded_rows.empty else 0.0

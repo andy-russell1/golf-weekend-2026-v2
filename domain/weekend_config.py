@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from domain.bonus_competitions import BONUS_COMPETITIONS_SETTING_KEY, bonus_competitions_to_json, default_bonus_competitions
+
 
 TOURNAMENT_NAME = "Russell Kelly Invitational"
 TEAM_ORDER = ("red", "blue")
@@ -118,7 +120,7 @@ FIXTURES: tuple[dict[str, Any], ...] = (
 
 DEFAULT_ALLOWANCE_PERCENT = 100
 DEFAULT_SHOW_GROSS_SECONDARY = True
-DEFAULT_WORKBOOK_NAME = "Russell_Kelly_Invitational_2026_google_sheets_ready_v2"
+DEFAULT_WORKBOOK_NAME = "South_Wales_Ryder_Cup_2026_google_sheets_ready"
 
 
 def default_player_names() -> list[str]:
@@ -183,6 +185,7 @@ def default_settings_sheet_rows() -> list[dict[str, Any]]:
         {"key": "selected_fixture_id", "value": FIXTURES[0]["id"]},
         {"key": "show_gross_secondary", "value": "true" if DEFAULT_SHOW_GROSS_SECONDARY else "false"},
         {"key": SINGLES_MATCHUPS_SETTING_KEY, "value": singles_matchups_to_json(default_singles_matchups())},
+        {"key": BONUS_COMPETITIONS_SETTING_KEY, "value": bonus_competitions_to_json(default_bonus_competitions())},
     ]
 
 

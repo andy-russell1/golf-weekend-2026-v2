@@ -20,6 +20,8 @@ def main() -> None:
         tee_rating=context["tee_rating"],
         players_rows=context["store"]["players_rows"],
         singles_matchups=context["singles_matchups"],
+        bonus_competitions=context["bonus_competitions"],
+        fixture_tees=context["weekend_state"]["fixture_tees"],
     )
 
 

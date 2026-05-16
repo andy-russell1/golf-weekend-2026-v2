@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from domain.bonus_competitions import BONUS_COMPETITIONS_SETTING_KEY, bonus_competitions_from_json
 from domain.weekend_config import (
     DEFAULT_ALLOWANCE_PERCENT,
     DEFAULT_SHOW_GROSS_SECONDARY,
@@ -214,6 +215,7 @@ def load_weekend_settings_map(settings_rows: list[dict[str, Any]]) -> dict[str, 
     settings_map.setdefault("selected_fixture_id", FIXTURES[0]["id"])
     settings_map.setdefault("show_gross_secondary", "true" if DEFAULT_SHOW_GROSS_SECONDARY else "false")
     settings_map.setdefault(SINGLES_MATCHUPS_SETTING_KEY, "")
+    settings_map.setdefault(BONUS_COMPETITIONS_SETTING_KEY, "")
     return settings_map
 
 
@@ -266,6 +268,7 @@ def weekend_state_from_round_rows(round_rows: list[dict[str, Any]], settings_row
         "fixture_stableford_modes": fixture_stableford_modes,
         "show_gross_secondary": parse_bool(settings_map.get("show_gross_secondary"), DEFAULT_SHOW_GROSS_SECONDARY),
         "singles_matchups": singles_matchups_from_json(settings_map.get(SINGLES_MATCHUPS_SETTING_KEY, "")),
+        "bonus_competitions": bonus_competitions_from_json(settings_map.get(BONUS_COMPETITIONS_SETTING_KEY, "")),
     }
 
 

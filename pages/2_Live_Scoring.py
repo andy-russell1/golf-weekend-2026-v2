@@ -48,6 +48,7 @@ def main() -> None:
             round_state=context["round_state"],
             shot_views=context["shot_views"],
             singles_matchups=context["singles_matchups"],
+            bonus_competitions=context["bonus_competitions"],
         )
 
     with edit_tab:

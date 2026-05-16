@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from components.layout import load_css, render_chip_row, render_connection_panel
+from domain.bonus_competitions import bonus_point_rows
 from domain.scoring import build_hole_shot_views, compute_round_results, compute_weekend_race
 from domain.weekend_config import FIXTURES, build_team_label, format_fixture_label, get_fixture, team_short_name
 from support.data_loader import data_package_exists, get_tee_rating, load_course_data
@@ -351,6 +352,9 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
     set_active_hole(selected_fixture_id, int(round_state["active_hole"]))
     saved_results = load_saved_results(snapshot=snapshot)
 
+    bonus_competitions = weekend_state.get("bonus_competitions", [])
+    bonus_rows = bonus_point_rows(bonus_competitions, store["players_rows"])
+
     return ensure_round_focus(
         {
             "store": store,
@@ -377,7 +381,9 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
             "results_by_fixture": results_by_fixture,
             "saved_results": saved_results,
             "shot_views": shot_views,
-            "weekend_race": compute_weekend_race(results_by_fixture),
+            "weekend_race": compute_weekend_race(results_by_fixture, bonus_rows=bonus_rows),
+            "bonus_competitions": bonus_competitions,
+            "bonus_point_rows": bonus_rows,
             "singles_matchups": weekend_state.get("singles_matchups", []),
             "round_rows_by_id": round_row_map(store["round_rows"]),
         }

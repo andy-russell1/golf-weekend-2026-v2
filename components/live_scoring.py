@@ -6,12 +6,18 @@ import pandas as pd
 import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_status_card
+from domain.bonus_competitions import (
+    BONUS_COMPETITIONS_SETTING_KEY,
+    bonus_competitions_to_json,
+    competitions_for_hole,
+    update_bonus_winner,
+)
 from domain.formatting import format_hole_name, format_relative_to
 from domain.scoring import compute_round_results, get_hole_shots_for_display
 from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config, set_active_hole
-from support.state_helpers import save_result_payload, save_scores_for_hole
+from support.state_helpers import save_result_payload, save_scores_for_hole, save_setting
 from domain.weekend_config import team_name
 from support.app_context import compact_team_label_text
 
@@ -175,6 +181,55 @@ def _persist_live_scores(
         save_result_payload(round_runtime["round_id"], result_payload)
 
 
+def _render_bonus_competition_winners(
+    bonus_competitions: list[dict[str, Any]],
+    round_runtime: dict[str, Any],
+    active_hole: int,
+    player_ids: list[str],
+    player_names: list[str],
+) -> None:
+    active_competitions = competitions_for_hole(bonus_competitions, round_runtime["round_id"], active_hole)
+    if not active_competitions:
+        return
+
+    st.markdown("#### Bonus Point")
+    winner_options = ["", *player_ids]
+    for competition in active_competitions:
+        current_winner = str(competition.get("winner_player_id") or "")
+        if current_winner not in winner_options:
+            current_winner = ""
+        render_status_card(
+            str(competition.get("label") or "Bonus Point"),
+            f"{float(competition.get('point_value') or 0.0):g} point",
+            "Pick the winner when the group has agreed it.",
+            tone="gold",
+        )
+        selected_winner = st.selectbox(
+            "Winner",
+            options=winner_options,
+            index=winner_options.index(current_winner),
+            format_func=lambda player_id: "No winner yet"
+            if not player_id
+            else player_names[player_ids.index(player_id)]
+            if player_id in player_ids
+            else str(player_id),
+            key=f"bonus-winner::{round_runtime['round_id']}::{active_hole}::{competition['id']}",
+        )
+        if st.button(
+            "Save Bonus Winner",
+            width="stretch",
+            disabled=selected_winner == current_winner,
+            key=f"bonus-save::{round_runtime['round_id']}::{active_hole}::{competition['id']}",
+        ):
+            updated_competitions = update_bonus_winner(
+                bonus_competitions,
+                str(competition["id"]),
+                str(selected_winner),
+            )
+            save_setting(BONUS_COMPETITIONS_SETTING_KEY, bonus_competitions_to_json(updated_competitions))
+            st.rerun()
+
+
 def render_live_scoring(
     course_df: pd.DataFrame,
     course: str,
@@ -184,6 +239,7 @@ def render_live_scoring(
     round_state: dict[str, Any],
     shot_views: list[dict[str, Any]],
     singles_matchups: list[dict[str, Any]] | None = None,
+    bonus_competitions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     format_name = round_runtime["format_name"]
     allowance_percent = round_runtime["allowance_percent"]
@@ -235,6 +291,13 @@ def render_live_scoring(
             f"SI {hole_record.get('si', '—')}",
             f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
         ]
+    )
+    _render_bonus_competition_winners(
+        bonus_competitions or [],
+        round_runtime=round_runtime,
+        active_hole=active_hole,
+        player_ids=player_ids,
+        player_names=player_names,
     )
     score_columns = list(config["score_columns"])
     defaults = []

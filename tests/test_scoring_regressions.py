@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from domain.bonus_competitions import bonus_point_rows, default_bonus_competitions, eligible_holes, update_bonus_winner
 from domain.result_serialization import summary_payload_for_storage
 from domain.scoring import compute_round_results, compute_weekend_race
 from domain.weekend_config import (
@@ -184,6 +185,37 @@ class ScoringRegressionTests(unittest.TestCase):
 
         self.assertEqual(float(weekend_race["points_table"].iloc[-1]["Points Available"]), 5.0)
         self.assertEqual(weekend_race["remaining_points"], 5.0)
+
+    def test_bonus_competitions_add_weekend_level_points(self) -> None:
+        competitions = default_bonus_competitions()
+        players_rows = [
+            {"player_id": "adam", "team_id": "red"},
+            {"player_id": "vincent", "team_id": "red"},
+            {"player_id": "alex", "team_id": "blue"},
+            {"player_id": "andy", "team_id": "blue"},
+        ]
+        competitions = update_bonus_winner(competitions, "longest_drive", "adam")
+        rows = bonus_point_rows(competitions, players_rows)
+        weekend_race = compute_weekend_race(
+            {fixture["id"]: {"format_name": fixture["default_format"]} for fixture in FIXTURES},
+            bonus_rows=rows,
+        )
+
+        self.assertEqual(float(weekend_race["points_table"].iloc[-1]["Points Available"]), 7.0)
+        self.assertEqual(weekend_race["red_points"], 1.0)
+        self.assertEqual(weekend_race["remaining_points"], 6.0)
+
+    def test_bonus_hole_filters_match_competition_type(self) -> None:
+        clyne = load_course_data("clyne")
+        rolls = load_course_data("rolls_monmouth")
+
+        closest_holes = eligible_holes(clyne, "closest_pin")
+        longest_holes = eligible_holes(rolls, "longest_drive")
+
+        self.assertTrue(closest_holes["par"].eq(3).all())
+        self.assertTrue(longest_holes["par"].isin([4, 5]).all())
+        self.assertEqual(int(closest_holes.iloc[1]["hole"]), 8)
+        self.assertEqual(int(longest_holes.iloc[2]["hole"]), 12)
 
 
 if __name__ == "__main__":
