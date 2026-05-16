@@ -61,6 +61,8 @@ def ensure_ui_state() -> dict[str, Any]:
         st.session_state["selected_fixture_id"] = FIXTURES[0]["id"]
     if "round_active_holes" not in st.session_state:
         st.session_state["round_active_holes"] = {}
+    if "round_active_hole_sources" not in st.session_state:
+        st.session_state["round_active_hole_sources"] = {}
     if "local_persistence" not in st.session_state:
         st.session_state["local_persistence"] = _build_local_store()
     return {
@@ -94,19 +96,26 @@ def set_selected_fixture_id(fixture_id: str) -> None:
     st.session_state["selected_fixture_id"] = fixture_id
 
 
-def get_active_hole(round_id: str, holes: list[int]) -> int:
+def get_active_hole(round_id: str, holes: list[int], default_hole: int | None = None) -> int:
     ensure_ui_state()
     active_holes = st.session_state["round_active_holes"]
-    active_hole = int(active_holes.get(round_id, holes[0] if holes else 1))
+    fallback = default_hole if default_hole is not None else (holes[0] if holes else 1)
+    active_hole = int(active_holes.get(round_id, fallback))
     if holes and active_hole not in holes:
-        active_hole = holes[0]
+        active_hole = int(fallback if fallback in holes else holes[0])
         active_holes[round_id] = active_hole
     return active_hole
 
 
-def set_active_hole(round_id: str, hole: int) -> None:
+def get_active_hole_source(round_id: str) -> str:
+    ensure_ui_state()
+    return str(st.session_state["round_active_hole_sources"].get(round_id, "derived"))
+
+
+def set_active_hole(round_id: str, hole: int, source: str = "manual") -> None:
     ensure_ui_state()
     st.session_state["round_active_holes"][round_id] = int(hole)
+    st.session_state["round_active_hole_sources"][round_id] = source
 
 
 def parse_bool(value: Any, default: bool = False) -> bool:
@@ -183,9 +192,15 @@ def update_local_setting(key: str, value: str) -> None:
 
 
 def save_local_hole_scores(round_id: str, hole: int, rows: list[dict[str, Any]]) -> None:
+    from datetime import datetime, timezone
+
     store = get_local_store()
     existing = store["scores"]
-    replacements = {(round_id, hole, str(row.get("player_id", ""))): row for row in rows}
+    saved_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    replacements = {
+        (round_id, hole, str(row.get("player_id", ""))): {**row, "updated_at": saved_at}
+        for row in rows
+    }
     updated: list[dict[str, Any]] = []
     seen: set[tuple[str, int, str]] = set()
     for row in existing:

@@ -9,6 +9,15 @@ from support.app_context import build_page_context, initialize_page, render_shar
 from support.session import set_active_hole
 
 
+def _round_cursor_label(round_focus: dict[str, object]) -> str:
+    if round_focus.get("round_complete"):
+        return "Round complete"
+    resume_hole = int(round_focus.get("resume_hole", 1) or 1)
+    if int(round_focus.get("completed_holes", 0) or 0) > 0:
+        return f"Resume scoring at hole {resume_hole}"
+    return f"Start scoring at hole {resume_hole}"
+
+
 def main() -> None:
     if not initialize_page("Course Guide"):
         return
@@ -24,7 +33,7 @@ def main() -> None:
             context["selected_fixture"]["title"],
             context["format_name"],
             f"{context['tee_label']} tees",
-            f"Active hole {int(context['round_state']['active_hole'])}",
+            _round_cursor_label(context["round_focus"]),
         ],
         tone="accent",
     )
@@ -53,7 +62,7 @@ def main() -> None:
             current_active_hole=int(context["round_state"]["active_hole"]),
         )
         if explorer_state["selected_hole"] != int(context["round_state"]["active_hole"]):
-            set_active_hole(context["selected_fixture"]["id"], int(explorer_state["selected_hole"]))
+            set_active_hole(context["selected_fixture"]["id"], int(explorer_state["selected_hole"]), source="manual")
             if explorer_state["open_live_scoring"]:
                 st.switch_page("pages/2_Live_Scoring.py")
             st.rerun()

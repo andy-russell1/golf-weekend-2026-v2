@@ -22,11 +22,16 @@ from domain.bonus_competitions import (
     normalize_bonus_competitions,
 )
 from domain.handicap import HANDICAP_ALLOCATION_OPTIONS, normalize_handicap_allocation
+from domain.scorecard_export import (
+    build_premium_scorecard_pdf,
+    build_scorecard_round_payload,
+    premium_scorecard_filename,
+)
 from support.data_loader import load_course_data
 from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
 from support.google_sheets import get_credentials, get_google_sheets_config, refresh_sheet_caches
-from support.state_helpers import clear_round, save_round_config, save_setting
+from support.state_helpers import build_round_state, clear_round, get_round_runtime, save_round_config, save_setting
 from domain.weekend_config import (
     FIXTURES,
     SINGLES_MATCHUPS_SETTING_KEY,
@@ -149,6 +154,92 @@ def _render_bonus_competition_editor(
         st.rerun()
 
 
+def _build_export_payload_for_fixture(
+    fixture: dict[str, Any],
+    store: dict[str, Any],
+    results_by_fixture: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
+    course_df = load_course_data(fixture["course"])
+    holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+    round_state = build_round_state(
+        round_id=fixture["id"],
+        holes=holes,
+        format_name=round_runtime["format_name"],
+        runtime_players=store["runtime_players"],
+        snapshot=store["persistence"],
+    )
+    return build_scorecard_round_payload(
+        fixture=fixture,
+        round_runtime=round_runtime,
+        round_state=round_state,
+        result=results_by_fixture.get(fixture["id"], {}),
+    )
+
+
+def _render_scorecard_exports(
+    selected_fixture: dict[str, Any],
+    store: dict[str, Any],
+    round_runtime: dict[str, Any],
+    round_state: dict[str, Any],
+    selected_result: dict[str, Any],
+    results_by_fixture: dict[str, dict[str, Any]],
+) -> None:
+    st.caption("Premium scorecards are print-first PDFs using saved gross scores and the central scoring result for each round.")
+
+    selected_payload = build_scorecard_round_payload(
+        fixture=selected_fixture,
+        round_runtime=round_runtime,
+        round_state=round_state,
+        result=selected_result,
+    )
+    all_payloads = [
+        _build_export_payload_for_fixture(fixture, store, results_by_fixture)
+        for fixture in FIXTURES
+    ]
+
+    export_columns = st.columns(2)
+    with export_columns[0]:
+        completed = int(round_state["scores"]["status"].eq("Complete").sum())
+        render_status_card(
+            "Selected Round",
+            selected_fixture["title"],
+            f"{completed} of {len(round_state['scores'].index)} holes saved",
+        )
+        selected_pdf = build_premium_scorecard_pdf([selected_payload])
+        st.download_button(
+            "Download Selected Scorecard",
+            data=selected_pdf,
+            file_name=premium_scorecard_filename([selected_payload]),
+            mime="application/pdf",
+            width="stretch",
+            type="primary",
+        )
+
+    with export_columns[1]:
+        saved_holes = 0
+        total_holes = 0
+        for payload in all_payloads:
+            scores = payload["round_state"]["scores"]
+            saved_holes += int(scores["status"].eq("Complete").sum())
+            total_holes += len(scores.index)
+        render_status_card(
+            "Weekend Pack",
+            "All scorecards",
+            f"{saved_holes} of {total_holes} holes saved across {len(all_payloads)} rounds",
+        )
+        all_pdf = build_premium_scorecard_pdf(all_payloads)
+        st.download_button(
+            "Download All Scorecards",
+            data=all_pdf,
+            file_name=premium_scorecard_filename(all_payloads),
+            mime="application/pdf",
+            width="stretch",
+        )
+
+    st.info("The lower scorecard uses net team scoring where the selected format is net-based. It does not recalculate rules inside the PDF layer.")
+
+
 def render_setup_admin(
     selected_fixture: dict[str, Any],
     persistence: dict[str, Any],
@@ -161,6 +252,9 @@ def render_setup_admin(
     singles_matchups: list[dict[str, Any]],
     bonus_competitions: list[dict[str, Any]],
     fixture_tees: dict[str, str],
+    selected_result: dict[str, Any],
+    results_by_fixture: dict[str, dict[str, Any]],
+    store: dict[str, Any],
 ) -> None:
     fixture_id = selected_fixture["id"]
     format_name = round_runtime["format_name"]
@@ -185,8 +279,8 @@ def render_setup_admin(
     if persistence["mode"] != "sheets":
         render_session_fallback_warning()
 
-    setup_tab, players_tab, connection_tab, admin_tab = st.tabs(
-        ["Round Setup", "Players & Handicaps", "Connection", "Admin Actions"]
+    setup_tab, players_tab, exports_tab, connection_tab, admin_tab = st.tabs(
+        ["Round Setup", "Players & Handicaps", "Exports", "Connection", "Admin Actions"]
     )
 
     with connection_tab:
@@ -357,6 +451,16 @@ def render_setup_admin(
         st.caption("Keep labels explicit here so names and playing handicaps stay readable on a phone during the round.")
         render_player_handicap_editor(players_rows=players_rows, round_runtime=round_runtime, tee_rating=tee_rating)
         render_round_summary_metrics(format_name=format_name, round_state=round_state)
+
+    with exports_tab:
+        _render_scorecard_exports(
+            selected_fixture=selected_fixture,
+            store=store,
+            round_runtime=round_runtime,
+            round_state=round_state,
+            selected_result=selected_result,
+            results_by_fixture=results_by_fixture,
+        )
 
     with admin_tab:
         render_status_card(
