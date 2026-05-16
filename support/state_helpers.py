@@ -12,6 +12,7 @@ from support.session import (
     clear_local_round_scores,
     coerce_score_frame,
     get_active_hole,
+    get_active_hole_source,
     get_local_store,
     get_selected_fixture_id,
     local_players,
@@ -31,6 +32,7 @@ from support.session import (
 )
 from domain.handicap import normalize_handicap_allocation
 from domain.weekend_config import FIXTURES, TEAM_CONFIG, get_fixture
+from support.round_progress import build_round_progress
 
 
 def persistence_snapshot(interactive: bool = False) -> dict[str, Any]:
@@ -117,20 +119,23 @@ def get_round_runtime(round_rows: list[dict[str, Any]], fixture_id: str) -> dict
     }
 
 
+def load_round_score_rows(round_id: str, snapshot: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    snapshot = snapshot or persistence_snapshot(interactive=False)
+    if snapshot["mode"] == "sheets":
+        try:
+            return google_sheets.load_scores(round_id)
+        except GoogleSheetsError:
+            return local_scores(round_id)
+    return local_scores(round_id)
+
+
 def load_round_scores(
     round_id: str,
     holes: list[int],
     format_name: str,
     snapshot: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
-    snapshot = snapshot or persistence_snapshot(interactive=False)
-    if snapshot["mode"] == "sheets":
-        try:
-            score_rows = google_sheets.load_scores(round_id)
-        except GoogleSheetsError:
-            score_rows = local_scores(round_id)
-    else:
-        score_rows = local_scores(round_id)
+    score_rows = load_round_score_rows(round_id, snapshot=snapshot)
     frame = _score_rows_to_round_frame(score_rows, holes=holes, format_name=format_name)
     return coerce_score_frame(frame, holes=holes, format_name=format_name)
 
@@ -166,13 +171,20 @@ def build_round_state(
     runtime_players: dict[str, Any],
     snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    score_frame = load_round_scores(round_id, holes=holes, format_name=format_name, snapshot=snapshot)
+    score_rows = load_round_score_rows(round_id, snapshot=snapshot)
+    frame = _score_rows_to_round_frame(score_rows, holes=holes, format_name=format_name)
+    score_frame = coerce_score_frame(frame, holes=holes, format_name=format_name)
+    progress = build_round_progress(score_frame, holes=holes, score_rows=score_rows)
+    stored_active_hole = get_active_hole(round_id, holes, default_hole=int(progress["resume_hole"]))
+    active_hole = stored_active_hole if get_active_hole_source(round_id) == "manual" else int(progress["resume_hole"])
     return {
         "player_ids": list(runtime_players["player_ids"]),
         "player_names": list(runtime_players["player_names"]),
         "handicap_indexes": list(runtime_players["handicap_indexes"]),
         "scores": score_frame,
-        "active_hole": get_active_hole(round_id, holes),
+        "active_hole": active_hole,
+        "progress": progress,
+        "score_rows": score_rows,
         "version": 0,
     }
 

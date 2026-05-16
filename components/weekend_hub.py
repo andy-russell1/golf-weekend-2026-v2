@@ -38,6 +38,7 @@ def render_weekend_hub(
     fixture_tees: dict[str, str],
     results_by_fixture: dict[str, dict[str, Any]],
     round_focus: dict[str, Any],
+    round_focus_by_fixture: dict[str, dict[str, Any]] | None,
     weekend_race: dict[str, Any],
     show_header: bool = True,
 ) -> None:
@@ -130,12 +131,12 @@ def render_weekend_hub(
     fixture_columns = st.columns(2)
     for index, fixture in enumerate(FIXTURES):
         fixture_result = results_by_fixture.get(fixture["id"], {})
+        fixture_focus = (round_focus_by_fixture or {}).get(fixture["id"], {})
         awarded = fixture_result.get("awarded_points", {"red": 0.0, "blue": 0.0})
-        status = "Awaiting scores"
-        if fixture_result.get("format_name") == "Singles" and fixture_result.get("matches"):
-            status = " / ".join(match["current_status"] for match in fixture_result["matches"])
-        elif fixture_result.get("match"):
-            status = fixture_result["match"]["current_status"]
+        status = str(fixture_focus.get("status_text") or "Awaiting scores")
+        progress_text = str(fixture_focus.get("progress_text") or "")
+        if progress_text:
+            status = f"{status} • {progress_text}"
 
         with fixture_columns[index % 2]:
             render_fixture_card(

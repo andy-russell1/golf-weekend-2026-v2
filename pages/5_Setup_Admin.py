@@ -22,6 +22,9 @@ def main() -> None:
         singles_matchups=context["singles_matchups"],
         bonus_competitions=context["bonus_competitions"],
         fixture_tees=context["weekend_state"]["fixture_tees"],
+        selected_result=context["selected_result"],
+        results_by_fixture=context["results_by_fixture"],
+        store=context["store"],
     )
 
 

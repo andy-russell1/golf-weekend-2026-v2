@@ -99,12 +99,18 @@ def build_round_focus(
     selected_result: dict[str, Any],
     tee_rating: dict[str, Any],
 ) -> dict[str, Any]:
-    total_holes = len(round_state["scores"].index)
-    completed_holes = int(round_state["scores"]["status"].eq("Complete").sum())
+    progress = round_state.get("progress", {})
+    total_holes = int(progress.get("total_holes", len(round_state["scores"].index)))
+    completed_holes = int(progress.get("completed_count", round_state["scores"]["status"].eq("Complete").sum()))
     active_hole = int(round_state["active_hole"])
-    next_hole = _first_incomplete_hole(round_state["scores"], active_hole)
+    resume_hole = int(progress.get("resume_hole") or _first_incomplete_hole(round_state["scores"], active_hole))
+    next_hole = resume_hole
+    round_complete = bool(progress.get("round_complete", completed_holes == total_holes and total_holes > 0))
     progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "No holes loaded"
     status_text = fixture_status_text(selected_result)
+    latest_saved_hole = progress.get("latest_saved_hole")
+    latest_saved_at = progress.get("latest_saved_at")
+    last_completed_hole = progress.get("last_completed_hole")
 
     if not tee_rating:
         return {
@@ -121,6 +127,11 @@ def build_round_focus(
             "total_holes": total_holes,
             "active_hole": active_hole,
             "next_hole": next_hole,
+            "resume_hole": resume_hole,
+            "round_complete": round_complete,
+            "latest_saved_hole": latest_saved_hole,
+            "latest_saved_at": latest_saved_at,
+            "last_completed_hole": last_completed_hole,
         }
 
     if completed_holes <= 0:
@@ -138,15 +149,20 @@ def build_round_focus(
             "total_holes": total_holes,
             "active_hole": active_hole,
             "next_hole": next_hole,
+            "resume_hole": resume_hole,
+            "round_complete": round_complete,
+            "latest_saved_hole": latest_saved_hole,
+            "latest_saved_at": latest_saved_at,
+            "last_completed_hole": last_completed_hole,
         }
 
-    if completed_holes < total_holes:
+    if not round_complete:
         return {
             "headline": "Round in progress",
-            "detail": f"Next hole {next_hole}",
+            "detail": f"Resume scoring at hole {resume_hole}",
             "status_text": status_text,
             "progress_text": progress_text,
-            "primary_label": "Continue live scoring",
+            "primary_label": f"Continue from hole {resume_hole}",
             "primary_page": "pages/2_Live_Scoring.py",
             "secondary_label": "Open match centre",
             "secondary_page": "pages/3_Match_Centre.py",
@@ -155,6 +171,11 @@ def build_round_focus(
             "total_holes": total_holes,
             "active_hole": active_hole,
             "next_hole": next_hole,
+            "resume_hole": resume_hole,
+            "round_complete": round_complete,
+            "latest_saved_hole": latest_saved_hole,
+            "latest_saved_at": latest_saved_at,
+            "last_completed_hole": last_completed_hole,
         }
 
     return {
@@ -171,6 +192,11 @@ def build_round_focus(
         "total_holes": total_holes,
         "active_hole": active_hole,
         "next_hole": next_hole,
+        "resume_hole": resume_hole,
+        "round_complete": round_complete,
+        "latest_saved_hole": latest_saved_hole,
+        "latest_saved_at": latest_saved_at,
+        "last_completed_hole": last_completed_hole,
     }
 
 
@@ -206,10 +232,12 @@ def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
         if isinstance(maybe_scores, pd.DataFrame):
             scores = maybe_scores
 
-    completed_holes = (
-        int(scores["status"].eq("Complete").sum()) if scores is not None and "status" in scores.columns else 0
+    progress = round_state.get("progress", {}) if isinstance(round_state, dict) else {}
+    completed_holes = int(
+        progress.get("completed_count", int(scores["status"].eq("Complete").sum()) if scores is not None and "status" in scores.columns else 0)
     )
     total_holes = len(scores.index) if scores is not None else 0
+    resume_hole = int(progress.get("resume_hole") or (_first_incomplete_hole(scores, active_hole) if scores is not None else active_hole))
     progress_text = f"{completed_holes} of {total_holes} holes saved" if total_holes else "Round progress unavailable"
     context["round_focus"] = {
         "headline": "Round overview",
@@ -224,7 +252,12 @@ def ensure_round_focus(context: dict[str, Any]) -> dict[str, Any]:
         "completed_holes": completed_holes,
         "total_holes": total_holes,
         "active_hole": active_hole,
-        "next_hole": _first_incomplete_hole(scores, active_hole) if scores is not None else active_hole,
+        "next_hole": resume_hole,
+        "resume_hole": resume_hole,
+        "round_complete": bool(progress.get("round_complete", False)),
+        "latest_saved_hole": progress.get("latest_saved_hole"),
+        "latest_saved_at": progress.get("latest_saved_at"),
+        "last_completed_hole": progress.get("last_completed_hole"),
     }
     return context
 
@@ -258,8 +291,9 @@ def render_shared_sidebar() -> dict[str, Any]:
             runtime_players=store["runtime_players"],
             snapshot=store["persistence"],
         )
-        completed_holes = int(round_state["scores"]["status"].eq("Complete").sum())
-        next_hole = _first_incomplete_hole(round_state["scores"], int(round_state["active_hole"]))
+        progress = round_state["progress"]
+        completed_holes = int(progress["completed_count"])
+        resume_hole = int(progress["resume_hole"])
 
         connection_status = store["persistence"]["status"]
         if str(connection_status.get("state", "")) != "connected":
@@ -267,7 +301,12 @@ def render_shared_sidebar() -> dict[str, Any]:
         st.caption("Selected round stays in sync across the app.")
         st.markdown(f"**{selected_fixture['title']}**")
         st.caption(f"{round_runtime['format_name']} • {round_runtime['tee_label']} tees")
-        st.caption(f"Active hole {int(round_state['active_hole'])} • Next to score {next_hole} • Completed {completed_holes}")
+        if progress["round_complete"]:
+            st.caption(f"Round complete • Completed {completed_holes}")
+        elif completed_holes > 0:
+            st.caption(f"Resume scoring at hole {resume_hole} • Completed {completed_holes}")
+        else:
+            st.caption(f"Start scoring at hole {resume_hole} • Completed {completed_holes}")
     return store
 
 
@@ -312,6 +351,34 @@ def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]
     return results_by_fixture
 
 
+def build_round_focus_by_fixture(
+    store: dict[str, Any],
+    results_by_fixture: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    focus_by_fixture: dict[str, dict[str, Any]] = {}
+    runtime_players = store["runtime_players"]
+    snapshot = store["persistence"]
+    for fixture in FIXTURES:
+        round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
+        fixture_course_df = load_course_data(fixture["course"])
+        fixture_holes = [int(hole) for hole in fixture_course_df["hole"].dropna().tolist()]
+        fixture_round_state = build_round_state(
+            round_id=fixture["id"],
+            holes=fixture_holes,
+            format_name=round_runtime["format_name"],
+            runtime_players=runtime_players,
+            snapshot=snapshot,
+        )
+        focus_by_fixture[fixture["id"]] = build_round_focus(
+            selected_fixture=fixture,
+            round_runtime=round_runtime,
+            round_state=fixture_round_state,
+            selected_result=results_by_fixture.get(fixture["id"], empty_result(round_runtime["format_name"])),
+            tee_rating=get_tee_rating(fixture["course"], round_runtime["tee_label"]),
+        )
+    return focus_by_fixture
+
+
 def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
     store = store or load_app_store()
     weekend_state = store["weekend_state"]
@@ -352,8 +419,9 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         singles_matchups=weekend_state.get("singles_matchups", []),
     )
 
-    set_active_hole(selected_fixture_id, int(round_state["active_hole"]))
+    set_active_hole(selected_fixture_id, int(round_state["active_hole"]), source="derived")
     saved_results = load_saved_results(snapshot=snapshot)
+    round_focus_by_fixture = build_round_focus_by_fixture(store, results_by_fixture)
 
     bonus_competitions = weekend_state.get("bonus_competitions", [])
     bonus_rows = bonus_point_rows(bonus_competitions, store["players_rows"])
@@ -383,6 +451,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
             "selected_result": selected_result,
             "round_focus": round_focus,
             "results_by_fixture": results_by_fixture,
+            "round_focus_by_fixture": round_focus_by_fixture,
             "saved_results": saved_results,
             "shot_views": shot_views,
             "weekend_race": compute_weekend_race(results_by_fixture, bonus_rows=bonus_rows),

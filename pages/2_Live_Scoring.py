@@ -28,11 +28,24 @@ def _render_round_switcher(current_fixture_id: str) -> None:
 def _render_live_status(context: dict[str, object]) -> None:
     persistence = context["persistence"]
     status = persistence["status"]
+    round_focus = context["round_focus"]
     last_save = st.session_state.get("last_live_save_status", {})
-    if isinstance(last_save, dict) and last_save.get("round_id") == context["selected_fixture"]["id"]:
-        save_status = f"Hole {last_save.get('hole')} saved at {last_save.get('saved_at')}"
+    latest_saved_hole = round_focus.get("latest_saved_hole")
+    latest_saved_at = round_focus.get("latest_saved_at")
+    if latest_saved_hole and latest_saved_at:
+        save_status = f"Hole {latest_saved_hole} at {latest_saved_at.astimezone().strftime('%H:%M')}"
+        save_detail = "Saved to workbook"
+    elif int(round_focus.get("completed_holes", 0) or 0) > 0:
+        save_status = f"Hole {round_focus.get('last_completed_hole', 'saved')}"
+        save_detail = "Saved to workbook"
     else:
-        save_status = "No save in this browser session yet"
+        save_status = "No saved holes yet"
+        save_detail = "Workbook has no scores for this round"
+
+    if isinstance(last_save, dict) and last_save.get("round_id") == context["selected_fixture"]["id"]:
+        browser_status = f"This browser saved hole {last_save.get('hole')} at {last_save.get('saved_at')}"
+    else:
+        browser_status = "No save from this browser session"
 
     columns = st.columns(2)
     with columns[0]:
@@ -41,7 +54,16 @@ def _render_live_status(context: dict[str, object]) -> None:
         else:
             render_status_card("Connection", "Session fallback", "Scores are not shared or durable", tone="gold")
     with columns[1]:
-        render_status_card("Last Save", save_status, "Current device session")
+        render_status_card("Last saved to workbook", save_status, f"{save_detail} • {browser_status}")
+
+
+def _round_cursor_label(round_focus: dict[str, object]) -> str:
+    if round_focus.get("round_complete"):
+        return "Round complete"
+    resume_hole = int(round_focus.get("resume_hole", 1) or 1)
+    if int(round_focus.get("completed_holes", 0) or 0) > 0:
+        return f"Resume scoring at hole {resume_hole}"
+    return f"Start scoring at hole {resume_hole}"
 
 
 def main() -> None:
@@ -63,7 +85,7 @@ def main() -> None:
             context["selected_fixture"]["title"],
             context["format_name"],
             f"{context['tee_label']} tees",
-            f"Active hole {int(context['round_state']['active_hole'])}",
+            _round_cursor_label(context["round_focus"]),
             context["round_focus"]["progress_text"],
             compact_fixture_status_text(context["selected_result"], context["player_names"]),
             team_format_label(context["format_name"], context["scramble_mode"], context["scoring_mode"]),

@@ -55,7 +55,7 @@ Confirm Google Sheets connection in `Setup / Admin` -> `Connection`. The connect
 
 Reset a round safely from `Setup / Admin` -> `Admin Actions`. Select the fixture in the sidebar first, tick the confirmation box, type `RESET`, then reset only that selected round.
 
-Score a hole on mobile from `Live Scoring`. Select the active hole, use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`.
+Score a hole on mobile from `Live Scoring`. The scoring cursor resumes from the saved `scores` rows, so a browser refresh after saving hole 1 should continue at hole 2. Use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`. Saved complete holes open in a protected viewing state; use `Edit saved hole` before updating workbook rows.
 
 Singles pairings can be set from `Setup / Admin` -> `Round Setup` when `Singles` is selected. The pairings are saved in the existing `settings` tab under `singles_matchups_json`, so no extra worksheet or header is required.
 
@@ -66,6 +66,7 @@ Weekend bonus competitions can be configured from `Setup / Admin` -> `Bonus Poin
 - `Weekend Hub` is the default front door in the sidebar navigation.
 - `Live Scoring` is the main on-course workflow; `Full Scorecard Edit` is the secondary correction path.
 - `pages/1_Weekend_Hub.py` now owns the hub view so the home page label stays clean in navigation.
+- `Setup / Admin` -> `Exports` provides premium PDF scorecard downloads for the selected round or the full weekend pack. The export uses saved gross scores plus the central scoring result, keeping PDF layout separate from scoring logic.
 
 ## Streamlit Community Cloud secrets
 

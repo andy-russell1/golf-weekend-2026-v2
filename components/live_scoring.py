@@ -26,6 +26,14 @@ from support.app_context import compact_team_label_text
 SCORE_OPTIONS = ["—", *list(range(1, 21))]
 
 
+def saved_hole_action_mode(saved_hole_complete: bool, edit_saved_hole: bool) -> str:
+    if saved_hole_complete and edit_saved_hole:
+        return "edit_saved"
+    if saved_hole_complete:
+        return "protected_saved"
+    return "normal"
+
+
 def _score_widget_key(round_id: str, course: str, hole: int, player_id: str) -> str:
     return f"live-score::{round_id}::{course}::{hole}::{player_id}"
 
@@ -259,26 +267,40 @@ def render_live_scoring(
 
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     config = get_format_config(format_name)
+    progress = round_state.get("progress", {})
+    resume_hole = int(progress.get("resume_hole", round_state["active_hole"]) or round_state["active_hole"])
     active_hole = int(round_state["active_hole"])
     if active_hole not in holes:
         active_hole = holes[0]
-        set_active_hole(round_runtime["round_id"], active_hole)
+        set_active_hole(round_runtime["round_id"], active_hole, source="derived")
+
+    if progress.get("round_complete"):
+        render_status_card("Round complete", "All 18 holes saved", "Use full scorecard edit if a correction is needed.", tone="green")
+    elif int(progress.get("completed_count", 0) or 0) > 0:
+        if st.button(
+            f"Continue from hole {resume_hole}",
+            width="stretch",
+            type="primary",
+            disabled=active_hole == resume_hole,
+        ):
+            set_active_hole(round_runtime["round_id"], resume_hole, source="derived")
+            st.rerun()
 
     nav_columns = st.columns(2)
     with nav_columns[0]:
         if st.button("Previous", width="stretch", disabled=active_hole == holes[0]):
-            set_active_hole(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)])
+            set_active_hole(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)], source="manual")
             st.rerun()
     with nav_columns[1]:
         if st.button("Next", width="stretch", disabled=active_hole == holes[-1]):
-            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
+            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)], source="manual")
             st.rerun()
 
     selector_columns = st.columns([1.5, 0.75])
     with selector_columns[0]:
         selected_hole = st.selectbox("Jump To Hole", options=holes, index=holes.index(active_hole))
         if selected_hole != active_hole:
-            set_active_hole(round_runtime["round_id"], int(selected_hole))
+            set_active_hole(round_runtime["round_id"], int(selected_hole), source="manual")
             active_hole = int(selected_hole)
     with selector_columns[1]:
         render_metric_card("Hole", active_hole, "active")
@@ -289,6 +311,9 @@ def render_live_scoring(
     hole_par = hole_record.get("par", 4)
 
     current_row = round_state["scores"][round_state["scores"]["hole"] == active_hole].iloc[0]
+    saved_hole_complete = str(current_row.get("status", "")) == "Complete"
+    edit_key = f"edit-saved-hole::{round_runtime['round_id']}::{active_hole}"
+    edit_saved_hole = bool(st.session_state.get(edit_key, False))
     entry_values: dict[str, object] = {}
 
     render_chip_row(
@@ -299,6 +324,21 @@ def render_live_scoring(
             f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
         ]
     )
+    action_mode = saved_hole_action_mode(saved_hole_complete, edit_saved_hole)
+
+    if action_mode == "protected_saved":
+        render_status_card(
+            "Saved Hole",
+            f"Viewing saved hole {active_hole}",
+            "Use Edit saved hole before updating workbook scores.",
+            tone="gold",
+        )
+        if st.button("Edit saved hole", width="stretch", type="primary"):
+            st.session_state[edit_key] = True
+            st.rerun()
+    elif action_mode == "edit_saved":
+        st.warning(f"Editing saved hole {active_hole}. Saving will update the existing workbook rows.")
+
     _render_bonus_competition_winners(
         bonus_competitions or [],
         round_runtime=round_runtime,
@@ -336,6 +376,7 @@ def render_live_scoring(
                       "-1",
                     key=f"{widget_key}::minus",
                     width="stretch",
+                    disabled=action_mode == "protected_saved",
                     help=f"Decrease {label}'s gross score",
                     on_click=_set_incremented_score,
                     args=(value_key, hole_par, -1),
@@ -351,6 +392,7 @@ def render_live_scoring(
                     index=index,
                     key=f"{widget_key}::select::{current_score}",
                     label_visibility="collapsed",
+                    disabled=action_mode == "protected_saved",
                 )
                 st.session_state[value_key] = selected_score
                 entry_values[score_column] = selected_score
@@ -359,6 +401,7 @@ def render_live_scoring(
                     "+1",
                     key=f"{widget_key}::plus",
                     width="stretch",
+                    disabled=action_mode == "protected_saved",
                     help=f"Increase {label}'s gross score",
                     on_click=_set_incremented_score,
                     args=(value_key, hole_par, 1),
@@ -393,19 +436,33 @@ def render_live_scoring(
     preview_cards = _hole_preview(preview_result, format_name, active_hole, player_names)
     hole_is_complete = _status_for_values(list(entry_values.values()), required_count=len(score_columns)) == "Complete"
 
-    if not hole_is_complete:
+    protected_saved_hole = action_mode == "protected_saved"
+
+    if protected_saved_hole:
+        st.info("Saved scores are protected from accidental overwrite.")
+    elif not hole_is_complete:
         st.warning("Enter all required gross scores before using Save + Next. Use Save Hole if you intentionally need to keep this hole pending or in progress.")
 
-    if st.button("Save + Next", width="stretch", type="primary", disabled=not hole_is_complete):
+    if action_mode == "edit_saved":
+        if st.button("Update Saved Hole", width="stretch", type="primary", disabled=not has_unsaved_changes):
+            updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
+            try:
+                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+                st.session_state[edit_key] = False
+                set_active_hole(round_runtime["round_id"], resume_hole, source="derived")
+                st.rerun()
+            except GoogleSheetsError as exc:
+                st.error(str(exc))
+    elif st.button("Save + Next", width="stretch", type="primary", disabled=not hole_is_complete):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
             _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
-            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)])
+            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)], source="derived")
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))
 
-    if st.button("Save Hole", width="stretch"):
+    if action_mode == "normal" and st.button("Save Hole", width="stretch"):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
             _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
@@ -419,7 +476,10 @@ def render_live_scoring(
             f"I understand this will clear hole {active_hole}.",
             key=f"confirm-clear-hole::{round_runtime['round_id']}::{active_hole}",
         )
-        if st.button("Clear Scores And Mark Pending", width="stretch", disabled=not confirm_clear):
+        clear_disabled = not confirm_clear or (saved_hole_complete and not edit_saved_hole)
+        if saved_hole_complete and not edit_saved_hole:
+            st.caption("Enable Edit saved hole before clearing saved workbook rows.")
+        if st.button("Clear Scores And Mark Pending", width="stretch", disabled=clear_disabled):
             updated_scores = _update_scores(
                 round_state["scores"],
                 active_hole,

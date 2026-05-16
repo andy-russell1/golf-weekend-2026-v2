@@ -30,6 +30,7 @@ def main() -> None:
         fixture_tees=context["weekend_state"]["fixture_tees"],
         results_by_fixture=context["results_by_fixture"],
         round_focus=context["round_focus"],
+        round_focus_by_fixture=context["round_focus_by_fixture"],
         weekend_race=context["weekend_race"],
         show_header=False,
     )
