@@ -120,7 +120,7 @@ FIXTURES: tuple[dict[str, Any], ...] = (
 
 DEFAULT_ALLOWANCE_PERCENT = 100
 DEFAULT_SHOW_GROSS_SECONDARY = True
-DEFAULT_WORKBOOK_NAME = "South_Wales_Ryder_Cup_2026_google_sheets_ready"
+DEFAULT_WORKBOOK_NAME = "Russell_Kelly_Invitational_2026_google_sheets_ready_v2"
 
 
 def default_player_names() -> list[str]:

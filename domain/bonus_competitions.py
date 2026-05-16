@@ -148,6 +148,32 @@ def update_bonus_winner(
     return updated
 
 
+def configured_bonus_competition(
+    competition: dict[str, Any],
+    *,
+    round_id: str,
+    course: str,
+    hole: int,
+    point_value: float,
+    enabled: bool,
+) -> dict[str, Any]:
+    target_changed = (
+        str(competition.get("round_id")) != str(round_id)
+        or str(competition.get("course")) != str(course)
+        or int(competition.get("hole") or 0) != int(hole)
+        or float(competition.get("point_value") or 0.0) != float(point_value)
+    )
+    return {
+        **competition,
+        "round_id": str(round_id),
+        "course": str(course),
+        "hole": int(hole),
+        "point_value": max(0.0, float(point_value)),
+        "enabled": bool(enabled),
+        "winner_player_id": "" if target_changed else str(competition.get("winner_player_id") or ""),
+    }
+
+
 def bonus_point_rows(competitions: list[dict[str, Any]], players_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     player_team_lookup = {
         str(row.get("player_id", "")): str(row.get("team_id", ""))
