@@ -47,6 +47,7 @@ def main() -> None:
             tee_rating=context["tee_rating"],
             round_state=context["round_state"],
             shot_views=context["shot_views"],
+            singles_matchups=context["singles_matchups"],
         )
 
     with edit_tab:
@@ -59,6 +60,7 @@ def main() -> None:
             round_runtime=context["round_runtime"],
             round_state=context["round_state"],
             tee_rating=context["tee_rating"],
+            singles_matchups=context["singles_matchups"],
         )
         render_round_summary_metrics(format_name=context["format_name"], round_state=context["round_state"])
 

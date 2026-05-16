@@ -5,7 +5,14 @@ import unittest
 
 from domain.result_serialization import summary_payload_for_storage
 from domain.scoring import compute_round_results, compute_weekend_race
-from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, points_available_for_format
+from domain.weekend_config import (
+    FIXTURES,
+    SINGLES_MATCHUPS,
+    SINGLES_MATCHUPS_SETTING_KEY,
+    points_available_for_format,
+    singles_matchups_from_json,
+    singles_matchups_to_json,
+)
 from support.data_loader import get_tee_rating, load_course_data
 from support.session import blank_scores
 
@@ -123,6 +130,54 @@ class ScoringRegressionTests(unittest.TestCase):
         self.assertAlmostEqual(sum(match["point_value"] for match in SINGLES_MATCHUPS), 2.0)
         self.assertAlmostEqual(sum(result["awarded_points"].values()), 2.0)
         self.assertAlmostEqual(sum(result["projected_points"].values()), 2.0)
+
+    def test_custom_singles_matchups_are_used_by_scoring(self) -> None:
+        course_df = load_course_data("rolls_monmouth")
+        tee_rating = get_tee_rating("rolls_monmouth", "White")
+        holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+        matchups = [
+            {"players": [0, 3], "point_value": 1.0},
+            {"players": [1, 2], "point_value": 1.0},
+        ]
+
+        result = compute_round_results(
+            course_df=course_df,
+            format_name="Singles",
+            score_df=_partial_score_frame("Singles", holes),
+            player_names=PLAYER_NAMES,
+            player_ids=PLAYER_IDS,
+            handicap_indexes=HANDICAP_INDEXES,
+            tee_rating=tee_rating,
+            allowance_percent=100,
+            singles_matchups=matchups,
+        )
+
+        self.assertEqual([match["label"] for match in result["matches"]], ["Adam vs Andy", "Vincent vs Alex"])
+        self.assertEqual([match["teams"] for match in result["matches"]], [("red", "blue"), ("red", "blue")])
+
+    def test_singles_matchups_round_trip_through_settings_json(self) -> None:
+        matchups = [
+            {"players": [0, 3], "point_value": 1.0},
+            {"players": [1, 2], "point_value": 1.0},
+        ]
+
+        encoded = singles_matchups_to_json(matchups)
+        decoded = singles_matchups_from_json(encoded)
+
+        self.assertEqual(SINGLES_MATCHUPS_SETTING_KEY, "singles_matchups_json")
+        self.assertEqual([tuple(match["players"]) for match in decoded], [(0, 3), (1, 2)])
+
+    def test_invalid_singles_matchups_fall_back_to_defaults(self) -> None:
+        encoded = singles_matchups_to_json(
+            [
+                {"players": [0, 2], "point_value": 1.0},
+                {"players": [0, 3], "point_value": 1.0},
+            ]
+        )
+
+        decoded = singles_matchups_from_json(encoded)
+
+        self.assertEqual([tuple(match["players"]) for match in decoded], [tuple(match["players"]) for match in SINGLES_MATCHUPS])
 
     def test_default_weekend_points_total_is_five(self) -> None:
         weekend_race = compute_weekend_race({fixture["id"]: {"format_name": fixture["default_format"]} for fixture in FIXTURES})

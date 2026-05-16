@@ -10,7 +10,28 @@ from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
 from support.google_sheets import get_credentials, get_google_sheets_config, refresh_sheet_caches
 from support.state_helpers import clear_round, save_round_config, save_setting
-from domain.weekend_config import SINGLES_MATCHUPS, format_fixture_label, points_available_for_format
+from domain.weekend_config import (
+    SINGLES_MATCHUPS_SETTING_KEY,
+    TEAM_CONFIG,
+    format_fixture_label,
+    normalize_singles_matchups,
+    points_available_for_format,
+    singles_matchups_to_json,
+    team_for_player,
+)
+
+
+def _player_name(player_names: list[str], player_index: int) -> str:
+    if 0 <= player_index < len(player_names):
+        return player_names[player_index]
+    return f"Player {player_index + 1}"
+
+
+def _match_player_for_team(match: dict[str, Any], team_id: str, fallback: int) -> int:
+    for player_index in match.get("players", []):
+        if team_for_player(int(player_index)) == team_id:
+            return int(player_index)
+    return fallback
 
 
 def render_setup_admin(
@@ -22,6 +43,7 @@ def render_setup_admin(
     holes: list[int],
     tee_rating: dict[str, Any],
     players_rows: list[dict[str, Any]],
+    singles_matchups: list[dict[str, Any]],
 ) -> None:
     fixture_id = selected_fixture["id"]
     format_name = round_runtime["format_name"]
@@ -108,16 +130,45 @@ def render_setup_admin(
 
         with control_columns[1]:
             show_gross_secondary_value = st.toggle("Show Gross Best Ball In Match Centre", value=show_gross_secondary)
+            updated_singles_matchups = normalize_singles_matchups(singles_matchups, player_count=len(round_state["player_names"]))
+            singles_setup_valid = True
             if updated_format == "Singles":
-                st.info("Singles is two parallel 1-point matches. The fixture carries 2 points in total.")
-                for match in SINGLES_MATCHUPS:
-                    left_index, right_index = match["players"]
-                    st.caption(
-                        f"{round_state['player_names'][left_index]} vs {round_state['player_names'][right_index]} "
-                        f"({float(match['point_value']):g} point)"
-                    )
+                st.info("Singles is two parallel 1-point matches. Pick one Kelly player and one Russell player for each match.")
+                player_names = list(round_state["player_names"])
+                red_options = list(TEAM_CONFIG["red"]["player_indices"])
+                blue_options = list(TEAM_CONFIG["blue"]["player_indices"])
+                edited_matchups: list[dict[str, Any]] = []
+                for match_index, match in enumerate(updated_singles_matchups):
+                    red_default = _match_player_for_team(match, "red", red_options[min(match_index, len(red_options) - 1)])
+                    blue_default = _match_player_for_team(match, "blue", blue_options[min(match_index, len(blue_options) - 1)])
+                    st.caption(f"Match {match_index + 1} - 1 point")
+                    matchup_columns = st.columns(2)
+                    with matchup_columns[0]:
+                        red_player = st.selectbox(
+                            f"{TEAM_CONFIG['red']['short_name']} player",
+                            options=red_options,
+                            index=red_options.index(red_default) if red_default in red_options else 0,
+                            format_func=lambda index: _player_name(player_names, int(index)),
+                            key=f"singles-matchup::{fixture_id}::{match_index}::red",
+                        )
+                    with matchup_columns[1]:
+                        blue_player = st.selectbox(
+                            f"{TEAM_CONFIG['blue']['short_name']} player",
+                            options=blue_options,
+                            index=blue_options.index(blue_default) if blue_default in blue_options else 0,
+                            format_func=lambda index: _player_name(player_names, int(index)),
+                            key=f"singles-matchup::{fixture_id}::{match_index}::blue",
+                        )
+                    edited_matchups.append({"players": [int(red_player), int(blue_player)], "point_value": 1.0})
 
-        if st.button("Save Round Setup", width="stretch"):
+                selected_players = [player for match in edited_matchups for player in match["players"]]
+                singles_setup_valid = sorted(selected_players) == list(range(len(player_names)))
+                if singles_setup_valid:
+                    updated_singles_matchups = edited_matchups
+                else:
+                    st.warning("Use each of the four players exactly once across the two Singles matches.")
+
+        if st.button("Save Round Setup", width="stretch", disabled=updated_format == "Singles" and not singles_setup_valid):
             payload = {
                 "round_order": round_runtime.get("round_order", selected_fixture.get("round_order", 0)),
                 "title": selected_fixture["title"],
@@ -140,6 +191,8 @@ def render_setup_admin(
             }
             save_round_config(fixture_id, payload)
             save_setting("show_gross_secondary", "true" if show_gross_secondary_value else "false")
+            if updated_format == "Singles":
+                save_setting(SINGLES_MATCHUPS_SETTING_KEY, singles_matchups_to_json(updated_singles_matchups))
             st.rerun()
 
         summary_columns = st.columns(4)

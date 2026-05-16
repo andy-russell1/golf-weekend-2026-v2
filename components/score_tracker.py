@@ -96,6 +96,7 @@ def render_full_card_editor(
     round_runtime: dict[str, object],
     round_state: dict[str, object],
     tee_rating: dict[str, object],
+    singles_matchups: list[dict[str, object]] | None = None,
 ) -> pd.DataFrame:
     format_name = str(round_runtime["format_name"])
     config = get_format_config(format_name)
@@ -143,6 +144,7 @@ def render_full_card_editor(
                 scramble_mode=str(round_runtime["scramble_mode"]),
                 scoring_mode=str(round_runtime["scoring_mode"]),
                 stableford_mode=str(round_runtime["stableford_mode"]),
+                singles_matchups=singles_matchups,
             )
             save_result_payload(str(round_runtime["round_id"]), result)
             st.rerun()
@@ -168,6 +170,7 @@ def render_score_tracker(
     round_state: dict[str, object],
     players_rows: list[dict[str, object]],
     tee_rating: dict[str, object],
+    singles_matchups: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     render_section_header(
         "Round Controls",
@@ -182,7 +185,13 @@ def render_score_tracker(
         )
 
     with st.expander("Full Card Edit", expanded=False):
-        render_full_card_editor(course_df=course_df, round_runtime=round_runtime, round_state=round_state, tee_rating=tee_rating)
+        render_full_card_editor(
+            course_df=course_df,
+            round_runtime=round_runtime,
+            round_state=round_state,
+            tee_rating=tee_rating,
+            singles_matchups=singles_matchups,
+        )
 
     render_round_summary_metrics(format_name=str(round_runtime["format_name"]), round_state=round_state)
 

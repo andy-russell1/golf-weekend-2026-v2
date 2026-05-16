@@ -183,6 +183,7 @@ def render_live_scoring(
     tee_rating: dict[str, Any],
     round_state: dict[str, Any],
     shot_views: list[dict[str, Any]],
+    singles_matchups: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     format_name = round_runtime["format_name"]
     allowance_percent = round_runtime["allowance_percent"]
@@ -312,6 +313,7 @@ def render_live_scoring(
             scramble_mode=scramble_mode,
             scoring_mode=scoring_mode,
             stableford_mode=stableford_mode,
+            singles_matchups=singles_matchups,
         )
         if tee_rating
         else {}
@@ -358,6 +360,7 @@ def render_live_scoring(
                     scramble_mode=scramble_mode,
                     scoring_mode=scoring_mode,
                     stableford_mode=stableford_mode,
+                    singles_matchups=singles_matchups,
                 )
                 if tee_rating
                 else {}

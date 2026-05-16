@@ -273,6 +273,7 @@ def render_shared_sidebar() -> dict[str, Any]:
 def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]:
     results_by_fixture: dict[str, dict[str, Any]] = {}
     runtime_players = store["runtime_players"]
+    singles_matchups = store["weekend_state"].get("singles_matchups", [])
     snapshot = store["persistence"]
     for fixture in FIXTURES:
         round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
@@ -300,6 +301,7 @@ def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]
                 scramble_mode=round_runtime["scramble_mode"],
                 scoring_mode=round_runtime["scoring_mode"],
                 stableford_mode=round_runtime["stableford_mode"],
+                singles_matchups=singles_matchups,
             )
         else:
             result = empty_result(round_runtime["format_name"])
@@ -343,6 +345,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         format_name=round_runtime["format_name"],
         player_rows=selected_result.get("player_handicaps", pd.DataFrame()),
         player_names=player_names,
+        singles_matchups=weekend_state.get("singles_matchups", []),
     )
 
     set_active_hole(selected_fixture_id, int(round_state["active_hole"]))
@@ -375,6 +378,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
             "saved_results": saved_results,
             "shot_views": shot_views,
             "weekend_race": compute_weekend_race(results_by_fixture),
+            "singles_matchups": weekend_state.get("singles_matchups", []),
             "round_rows_by_id": round_row_map(store["round_rows"]),
         }
     )

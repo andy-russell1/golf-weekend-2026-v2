@@ -6,7 +6,7 @@ import pandas as pd
 
 from domain.formatting import format_match_status
 from domain.result_serialization import export_dataframe_bytes
-from domain.weekend_config import SINGLES_MATCHUPS, TEAM_CONFIG, build_team_label
+from domain.weekend_config import SINGLES_MATCHUPS, TEAM_CONFIG, build_team_label, normalize_singles_matchups
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS
 from domain.handicap import build_shot_allocation_table
 
@@ -210,6 +210,7 @@ def score_singles(
     score_df: pd.DataFrame,
     player_rows: pd.DataFrame,
     player_names: list[str],
+    singles_matchups: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     summary = course_df[["hole", "par", "si", "section", "hole_name"]].copy()
     summary = summary.merge(score_df, on="hole", how="left")
@@ -220,7 +221,8 @@ def score_singles(
     awarded_points = {"red": 0.0, "blue": 0.0}
     projected_points = {"red": 0.0, "blue": 0.0}
 
-    for match in SINGLES_MATCHUPS:
+    configured_matchups = normalize_singles_matchups(singles_matchups or list(SINGLES_MATCHUPS), player_count=len(player_names))
+    for match in configured_matchups:
         left_idx, right_idx = match["players"]
         left_name = player_names[left_idx]
         right_name = player_names[right_idx]

@@ -6,7 +6,7 @@ import pandas as pd
 
 from domain.handicap import build_player_handicap_table, build_shot_allocation_table
 from domain.matchplay import score_four_ball, score_singles, score_skins, score_stroke_play
-from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, build_team_label, points_available_for_format, team_name, team_short_name
+from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, build_team_label, normalize_singles_matchups, points_available_for_format, team_name, team_short_name
 
 
 def compute_round_results(
@@ -21,6 +21,7 @@ def compute_round_results(
     scoring_mode: str = "net",
     stableford_mode: str = "",
     player_ids: list[str] | None = None,
+    singles_matchups: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if course_df.empty:
         return {"format_name": format_name, "summary_df": pd.DataFrame(), "player_handicaps": pd.DataFrame()}
@@ -35,7 +36,7 @@ def compute_round_results(
         return {"format_name": format_name, "summary_df": pd.DataFrame(), "player_handicaps": player_rows}
 
     if format_name == "Singles":
-        result = score_singles(course_df, score_df, player_rows, player_names)
+        result = score_singles(course_df, score_df, player_rows, player_names, singles_matchups=singles_matchups)
     elif format_name == "4-Ball":
         result = score_four_ball(course_df, score_df, player_rows, player_names)
     elif format_name == "Stroke Play":
@@ -72,13 +73,14 @@ def build_hole_shot_views(
     player_names: list[str],
     scramble_mode: str = "",
     scoring_mode: str = "net",
+    singles_matchups: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     if course_df.empty or player_rows.empty:
         return []
 
     if format_name == "Singles":
         groups: list[dict[str, Any]] = []
-        for match in SINGLES_MATCHUPS:
+        for match in normalize_singles_matchups(singles_matchups or list(SINGLES_MATCHUPS), player_count=len(player_names)):
             left_idx, right_idx = match["players"]
             left_name = player_names[left_idx]
             right_name = player_names[right_idx]

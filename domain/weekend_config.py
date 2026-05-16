@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 
@@ -34,6 +35,7 @@ SINGLES_MATCHUPS: tuple[dict[str, Any], ...] = (
     {"players": (3, 1), "label": "Andy vs Vincent", "point_value": 1.0},
     {"players": (0, 2), "label": "Adam vs Alex", "point_value": 1.0},
 )
+SINGLES_MATCHUPS_SETTING_KEY = "singles_matchups_json"
 
 FIXTURES: tuple[dict[str, Any], ...] = (
     {
@@ -180,6 +182,7 @@ def default_settings_sheet_rows() -> list[dict[str, Any]]:
     return [
         {"key": "selected_fixture_id", "value": FIXTURES[0]["id"]},
         {"key": "show_gross_secondary", "value": "true" if DEFAULT_SHOW_GROSS_SECONDARY else "false"},
+        {"key": SINGLES_MATCHUPS_SETTING_KEY, "value": singles_matchups_to_json(default_singles_matchups())},
     ]
 
 
@@ -226,3 +229,69 @@ def points_available_for_format(format_name: str) -> float:
     if format_name == "Singles":
         return sum(float(match.get("point_value", 0.0)) for match in SINGLES_MATCHUPS)
     return 1.0
+
+
+def default_singles_matchups() -> list[dict[str, Any]]:
+    return [
+        {
+            "players": list(match["players"]),
+            "label": str(match.get("label", "")),
+            "point_value": float(match.get("point_value", 1.0)),
+        }
+        for match in SINGLES_MATCHUPS
+    ]
+
+
+def singles_matchups_to_json(matchups: list[dict[str, Any]]) -> str:
+    storage_rows = [
+        {
+            "players": [int(match["players"][0]), int(match["players"][1])],
+            "point_value": float(match.get("point_value", 1.0)),
+        }
+        for match in matchups
+    ]
+    return json.dumps(storage_rows, separators=(",", ":"))
+
+
+def normalize_singles_matchups(matchups: Any, player_count: int = 4) -> list[dict[str, Any]]:
+    if not isinstance(matchups, list) or len(matchups) != 2:
+        return default_singles_matchups()
+
+    normalized: list[dict[str, Any]] = []
+    used_players: list[int] = []
+    for match in matchups:
+        if not isinstance(match, dict):
+            return default_singles_matchups()
+        raw_players = match.get("players", [])
+        if not isinstance(raw_players, (list, tuple)) or len(raw_players) != 2:
+            return default_singles_matchups()
+        try:
+            players = (int(raw_players[0]), int(raw_players[1]))
+            point_value = float(match.get("point_value", 1.0))
+        except (TypeError, ValueError):
+            return default_singles_matchups()
+        if any(player < 0 or player >= player_count for player in players):
+            return default_singles_matchups()
+        if team_for_player(players[0]) == team_for_player(players[1]):
+            return default_singles_matchups()
+        used_players.extend(players)
+        normalized.append(
+            {
+                "players": players,
+                "point_value": point_value,
+            }
+        )
+
+    if sorted(used_players) != list(range(player_count)):
+        return default_singles_matchups()
+    return normalized
+
+
+def singles_matchups_from_json(raw_value: str, player_count: int = 4) -> list[dict[str, Any]]:
+    if not raw_value:
+        return default_singles_matchups()
+    try:
+        payload = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return default_singles_matchups()
+    return normalize_singles_matchups(payload, player_count=player_count)

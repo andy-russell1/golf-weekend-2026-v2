@@ -57,6 +57,8 @@ Reset a round safely from `Setup / Admin` -> `Admin Actions`. Select the fixture
 
 Score a hole on mobile from `Live Scoring`. Select the active hole, use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`.
 
+Singles pairings can be set from `Setup / Admin` -> `Round Setup` when `Singles` is selected. The pairings are saved in the existing `settings` tab under `singles_matchups_json`, so no extra worksheet or header is required.
+
 ## Product flow
 
 - `Weekend Hub` is the default front door in the sidebar navigation.
