@@ -3,11 +3,20 @@ from __future__ import annotations
 import json
 import unittest
 
-from domain.bonus_competitions import bonus_point_rows, default_bonus_competitions, eligible_holes, update_bonus_winner
+from domain.bonus_competitions import (
+    bonus_competitions_from_json,
+    bonus_competitions_to_json,
+    bonus_point_rows,
+    configured_bonus_competition,
+    default_bonus_competitions,
+    eligible_holes,
+    update_bonus_winner,
+)
 from domain.result_serialization import summary_payload_for_storage
 from domain.scoring import compute_round_results, compute_weekend_race
 from domain.weekend_config import (
     FIXTURES,
+    DEFAULT_WORKBOOK_NAME,
     SINGLES_MATCHUPS,
     SINGLES_MATCHUPS_SETTING_KEY,
     points_available_for_format,
@@ -186,6 +195,9 @@ class ScoringRegressionTests(unittest.TestCase):
         self.assertEqual(float(weekend_race["points_table"].iloc[-1]["Points Available"]), 5.0)
         self.assertEqual(weekend_race["remaining_points"], 5.0)
 
+    def test_default_workbook_name_matches_documented_value(self) -> None:
+        self.assertEqual(DEFAULT_WORKBOOK_NAME, "Russell_Kelly_Invitational_2026_google_sheets_ready_v2")
+
     def test_bonus_competitions_add_weekend_level_points(self) -> None:
         competitions = default_bonus_competitions()
         players_rows = [
@@ -216,6 +228,58 @@ class ScoringRegressionTests(unittest.TestCase):
         self.assertTrue(longest_holes["par"].isin([4, 5]).all())
         self.assertEqual(int(closest_holes.iloc[1]["hole"]), 8)
         self.assertEqual(int(longest_holes.iloc[2]["hole"]), 12)
+
+    def test_bonus_config_preserves_zero_point_value(self) -> None:
+        competitions = default_bonus_competitions()
+        updated = [
+            configured_bonus_competition(
+                competitions[0],
+                round_id="rolls_monmouth",
+                course="rolls_monmouth",
+                hole=12,
+                point_value=0.0,
+                enabled=True,
+            ),
+            competitions[1],
+        ]
+
+        encoded = bonus_competitions_to_json(updated)
+        decoded = bonus_competitions_from_json(encoded)
+
+        longest_drive = next(competition for competition in decoded if competition["id"] == "longest_drive")
+        self.assertEqual(longest_drive["point_value"], 0.0)
+
+    def test_bonus_config_clears_winner_when_target_changes(self) -> None:
+        competition = update_bonus_winner(default_bonus_competitions(), "longest_drive", "adam")[0]
+
+        unchanged = configured_bonus_competition(
+            competition,
+            round_id="rolls_monmouth",
+            course="rolls_monmouth",
+            hole=12,
+            point_value=1.0,
+            enabled=True,
+        )
+        moved = configured_bonus_competition(
+            competition,
+            round_id="clyne",
+            course="clyne",
+            hole=8,
+            point_value=1.0,
+            enabled=True,
+        )
+        revalued = configured_bonus_competition(
+            competition,
+            round_id="rolls_monmouth",
+            course="rolls_monmouth",
+            hole=12,
+            point_value=0.5,
+            enabled=True,
+        )
+
+        self.assertEqual(unchanged["winner_player_id"], "adam")
+        self.assertEqual(moved["winner_player_id"], "")
+        self.assertEqual(revalued["winner_player_id"], "")
 
 
 if __name__ == "__main__":

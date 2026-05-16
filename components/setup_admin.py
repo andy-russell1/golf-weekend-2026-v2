@@ -9,6 +9,7 @@ from components.score_tracker import render_player_handicap_editor, render_round
 from domain.bonus_competitions import (
     BONUS_COMPETITIONS_SETTING_KEY,
     bonus_competitions_to_json,
+    configured_bonus_competition,
     competition_hole_label,
     eligible_holes,
     normalize_bonus_competitions,
@@ -77,7 +78,11 @@ def _render_bonus_competition_editor(
                 "Point value",
                 min_value=0.0,
                 max_value=5.0,
-                value=float(competition.get("point_value") or 1.0),
+                value=float(
+                    competition.get("point_value")
+                    if competition.get("point_value") not in (None, "")
+                    else 1.0
+                ),
                 step=0.5,
                 key=f"bonus-points::{competition['id']}",
             )
@@ -115,14 +120,14 @@ def _render_bonus_competition_editor(
             )
 
         edited_competitions.append(
-            {
-                **competition,
-                "round_id": selected_round_id,
-                "course": selected_fixture["course"],
-                "hole": int(selected_hole),
-                "point_value": float(point_value),
-                "enabled": bool(enabled),
-            }
+            configured_bonus_competition(
+                competition,
+                round_id=str(selected_round_id),
+                course=str(selected_fixture["course"]),
+                hole=int(selected_hole),
+                point_value=float(point_value),
+                enabled=bool(enabled),
+            )
         )
 
     if st.button("Save Bonus Competitions", width="stretch"):
