@@ -113,6 +113,7 @@ REQUIRED_HEADERS: dict[str, tuple[str, ...]] = {
     "results": RESULTS_HEADERS,
     "settings": SETTINGS_HEADERS,
 }
+VOLATILE_SHEET_CACHE_TTL_SECONDS = 5
 SERVICE_ACCOUNT_REQUIRED_FIELDS = (
     "type",
     "project_id",
@@ -598,8 +599,28 @@ def refresh_sheet_caches() -> None:
     load_players.clear()
     load_rounds.clear()
     _load_all_scores.clear()
-    load_results.clear()
+    _load_all_results.clear()
     load_settings.clear()
+
+
+def _sheet_version(sheet_name: str) -> str:
+    headers = REQUIRED_HEADERS[sheet_name]
+    updated_at_column = headers.index("updated_at") + 1
+    try:
+        values = get_worksheet(sheet_name).col_values(updated_at_column)[1:]
+    except APIError as exc:
+        raise SheetsWorkbookError(_api_error_message(exc)) from exc
+    populated = [str(value) for value in values if str(value).strip()]
+    latest_updated_at = max(populated) if populated else ""
+    return f"{len(values)}:{latest_updated_at}"
+
+
+def scores_version() -> str:
+    return _sheet_version("scores")
+
+
+def results_version() -> str:
+    return _sheet_version("results")
 
 
 def get_connection_status(interactive: bool = False) -> dict[str, Any]:
@@ -668,21 +689,25 @@ def load_rounds() -> list[dict[str, Any]]:
     return sorted(active_rows, key=lambda row: int(float(row.get("round_order") or 0)))
 
 
-@st.cache_data(show_spinner=False)
-def _load_all_scores() -> list[dict[str, Any]]:
+@st.cache_data(show_spinner=False, ttl=VOLATILE_SHEET_CACHE_TTL_SECONDS)
+def _load_all_scores(version: str) -> list[dict[str, Any]]:
     return _load_records("scores")
 
 
-def load_scores(round_id: str | None = None) -> list[dict[str, Any]]:
-    rows = _load_all_scores()
+def load_scores(round_id: str | None = None, version: str | None = None) -> list[dict[str, Any]]:
+    rows = _load_all_scores(version or scores_version())
     if round_id is None:
         return rows
     return [row for row in rows if str(row.get("round_id", "")) == round_id]
 
 
-@st.cache_data(show_spinner=False)
-def load_results() -> list[dict[str, Any]]:
+@st.cache_data(show_spinner=False, ttl=VOLATILE_SHEET_CACHE_TTL_SECONDS)
+def _load_all_results(version: str) -> list[dict[str, Any]]:
     return _load_records("results")
+
+
+def load_results(version: str | None = None) -> list[dict[str, Any]]:
+    return _load_all_results(version or results_version())
 
 
 @st.cache_data(show_spinner=False)
@@ -858,9 +883,9 @@ def save_round_result(round_id: str, result_payload: dict[str, object]) -> None:
     refresh_sheet_caches()
 
 
-def load_result_payloads() -> dict[str, dict[str, Any]]:
+def load_result_payloads(version: str | None = None) -> dict[str, dict[str, Any]]:
     payloads: dict[str, dict[str, Any]] = {}
-    for row in load_results():
+    for row in load_results(version=version):
         round_id = str(row.get("round_id", ""))
         raw_payload = row.get("payload_json")
         if not round_id or not raw_payload:
@@ -872,6 +897,6 @@ def load_result_payloads() -> dict[str, dict[str, Any]]:
     return payloads
 
 
-def scores_to_dataframe(round_id: str | None = None) -> pd.DataFrame:
-    rows = load_scores(round_id)
+def scores_to_dataframe(round_id: str | None = None, version: str | None = None) -> pd.DataFrame:
+    rows = load_scores(round_id, version=version)
     return pd.DataFrame(rows)

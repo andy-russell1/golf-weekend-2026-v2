@@ -7,8 +7,15 @@ from components.layout import render_status_card
 from components.live_scoring import render_live_scoring
 from components.score_tracker import render_full_card_editor, render_round_summary_metrics
 from domain.weekend_config import FIXTURES, format_fixture_label
-from support.app_context import build_page_context, compact_fixture_status_text, ensure_round_focus, initialize_page, render_shared_sidebar, team_format_label
-from support.session import set_selected_fixture_id
+from support.app_context import (
+    build_page_context,
+    compact_fixture_status_text,
+    ensure_round_focus,
+    initialize_page,
+    render_shared_sidebar,
+    set_selected_fixture_for_ui,
+    team_format_label,
+)
 
 
 def _render_round_switcher(current_fixture_id: str) -> None:
@@ -21,7 +28,7 @@ def _render_round_switcher(current_fixture_id: str) -> None:
         key="live-body-round-switcher",
     )
     if selected_fixture_id != current_fixture_id:
-        set_selected_fixture_id(selected_fixture_id)
+        set_selected_fixture_for_ui(selected_fixture_id)
         st.rerun()
 
 

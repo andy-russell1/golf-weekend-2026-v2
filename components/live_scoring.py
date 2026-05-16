@@ -17,13 +17,13 @@ from domain.formatting import format_hole_name, format_relative_to
 from domain.scoring import compute_round_results, get_hole_shots_for_display
 from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
-from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config, set_active_hole
+from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
 from support.state_helpers import save_result_payload, save_scores_for_hole, save_setting
 from domain.weekend_config import team_name
-from support.app_context import compact_team_label_text
+from support.app_context import compact_team_label_text, set_active_hole_for_ui
 
 
-SCORE_OPTIONS = ["—", *list(range(1, 21))]
+SCORE_OPTIONS = ["—", *list(range(1, 11))]
 
 
 def saved_hole_action_mode(saved_hole_complete: bool, edit_saved_hole: bool) -> str:
@@ -42,24 +42,36 @@ def _score_value_key(round_id: str, course: str, hole: int, player_id: str) -> s
     return f"{_score_widget_key(round_id, course, hole, player_id)}::value"
 
 
+def _score_select_key(round_id: str, course: str, hole: int, player_id: str) -> str:
+    return f"{_score_widget_key(round_id, course, hole, player_id)}::select"
+
+
 def _normalise_score_for_widget(value: object) -> str | int:
     if value in (None, "", "—") or pd.isna(value):
         return "—"
-    return max(1, int(value))
+    score = int(value)
+    if score < 1 or score > 10:
+        return "—"
+    return score
+
+
+def _score_options_for_widget(current_score: object) -> list[str | int]:
+    return list(SCORE_OPTIONS)
 
 
 def _increment_score(current: object, par: object, delta: int) -> int:
     if current in (None, "", "—") or pd.isna(current):
         try:
-            return max(1, int(par))
+            return min(10, max(1, int(par)))
         except (TypeError, ValueError):
             return 1
-    return max(1, int(current) + delta)
+    return min(10, max(1, int(current) + delta))
 
 
-def _set_incremented_score(value_key: str, par: object, delta: int) -> None:
+def _set_incremented_score(value_key: str, select_key: str, par: object, delta: int) -> None:
     updated = _increment_score(st.session_state.get(value_key, "—"), par, delta)
     st.session_state[value_key] = updated
+    st.session_state[select_key] = updated
 
 
 def _coerce_score(value: object) -> pd._libs.missing.NAType | int:
@@ -272,7 +284,7 @@ def render_live_scoring(
     active_hole = int(round_state["active_hole"])
     if active_hole not in holes:
         active_hole = holes[0]
-        set_active_hole(round_runtime["round_id"], active_hole, source="derived")
+        set_active_hole_for_ui(round_runtime["round_id"], active_hole, source="derived")
 
     if progress.get("round_complete"):
         render_status_card("Round complete", "All 18 holes saved", "Use full scorecard edit if a correction is needed.", tone="green")
@@ -283,24 +295,24 @@ def render_live_scoring(
             type="primary",
             disabled=active_hole == resume_hole,
         ):
-            set_active_hole(round_runtime["round_id"], resume_hole, source="derived")
+            set_active_hole_for_ui(round_runtime["round_id"], resume_hole, source="derived")
             st.rerun()
 
     nav_columns = st.columns(2)
     with nav_columns[0]:
         if st.button("Previous", width="stretch", disabled=active_hole == holes[0]):
-            set_active_hole(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)], source="manual")
+            set_active_hole_for_ui(round_runtime["round_id"], holes[max(0, holes.index(active_hole) - 1)], source="manual")
             st.rerun()
     with nav_columns[1]:
         if st.button("Next", width="stretch", disabled=active_hole == holes[-1]):
-            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)], source="manual")
+            set_active_hole_for_ui(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)], source="manual")
             st.rerun()
 
     selector_columns = st.columns([1.5, 0.75])
     with selector_columns[0]:
         selected_hole = st.selectbox("Jump To Hole", options=holes, index=holes.index(active_hole))
         if selected_hole != active_hole:
-            set_active_hole(round_runtime["round_id"], int(selected_hole), source="manual")
+            set_active_hole_for_ui(round_runtime["round_id"], int(selected_hole), source="manual")
             active_hole = int(selected_hole)
     with selector_columns[1]:
         render_metric_card("Hole", active_hole, "active")
@@ -366,31 +378,32 @@ def render_live_scoring(
             default = defaults[player_index]
             widget_key = _score_widget_key(round_runtime["round_id"], course, active_hole, player_id)
             value_key = _score_value_key(round_runtime["round_id"], course, active_hole, player_id)
+            select_key = _score_select_key(round_runtime["round_id"], course, active_hole, player_id)
             current_score = st.session_state.get(value_key, _normalise_score_for_widget(default))
+            score_options = _score_options_for_widget(current_score)
+            if select_key not in st.session_state or st.session_state[select_key] not in score_options:
+                st.session_state[select_key] = current_score if current_score in score_options else "—"
             score_row = st.columns([1.25, 0.35, 0.85, 0.35], gap="small")
             with score_row[0]:
                 st.markdown(f"**{label}**")
                 st.caption("No saved score" if default == "—" else f"Saved gross {default}")
             with score_row[1]:
-                  st.button(
-                      "-1",
+                st.button(
+                    "-1",
                     key=f"{widget_key}::minus",
                     width="stretch",
                     disabled=action_mode == "protected_saved",
                     help=f"Decrease {label}'s gross score",
                     on_click=_set_incremented_score,
-                    args=(value_key, hole_par, -1),
+                    args=(value_key, select_key, hole_par, -1),
                 )
             with score_row[2]:
-                if current_score not in SCORE_OPTIONS:
-                    SCORE_OPTIONS.append(int(current_score))
-                    SCORE_OPTIONS.sort(key=lambda item: 0 if item == "—" else int(item))
-                index = SCORE_OPTIONS.index(current_score) if current_score in SCORE_OPTIONS else 0
+                index = score_options.index(st.session_state[select_key])
                 selected_score = st.selectbox(
                     f"{label} gross score",
-                    options=SCORE_OPTIONS,
+                    options=score_options,
                     index=index,
-                    key=f"{widget_key}::select::{current_score}",
+                    key=select_key,
                     label_visibility="collapsed",
                     disabled=action_mode == "protected_saved",
                 )
@@ -404,7 +417,7 @@ def render_live_scoring(
                     disabled=action_mode == "protected_saved",
                     help=f"Increase {label}'s gross score",
                     on_click=_set_incremented_score,
-                    args=(value_key, hole_par, 1),
+                    args=(value_key, select_key, hole_par, 1),
                 )
 
     preview_scores = _update_scores(
@@ -449,7 +462,7 @@ def render_live_scoring(
             try:
                 _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
                 st.session_state[edit_key] = False
-                set_active_hole(round_runtime["round_id"], resume_hole, source="derived")
+                set_active_hole_for_ui(round_runtime["round_id"], resume_hole, source="derived")
                 st.rerun()
             except GoogleSheetsError as exc:
                 st.error(str(exc))
@@ -457,7 +470,11 @@ def render_live_scoring(
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
             _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
-            set_active_hole(round_runtime["round_id"], holes[min(len(holes) - 1, holes.index(active_hole) + 1)], source="derived")
+            set_active_hole_for_ui(
+                round_runtime["round_id"],
+                holes[min(len(holes) - 1, holes.index(active_hole) + 1)],
+                source="derived",
+            )
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))

@@ -24,6 +24,74 @@ from support.state_helpers import (
 
 FORMAT_OPTIONS = ("4-Ball", "Stroke Play", "Skins", "Singles")
 TEE_OPTIONS = ("White", "Yellow")
+FIXTURE_QUERY_PARAM = "fixture"
+HOLE_QUERY_PARAM = "hole"
+
+
+def _query_param_value(name: str) -> str:
+    value = st.query_params.get(name, "")
+    if isinstance(value, list):
+        return str(value[0]) if value else ""
+    return str(value or "")
+
+
+def _update_query_param_if_changed(name: str, value: object) -> bool:
+    text_value = str(value)
+    if _query_param_value(name) == text_value:
+        return False
+    st.query_params.update({name: text_value})
+    return True
+
+
+def _fixture_from_url(fixture_ids: list[str]) -> str | None:
+    fixture_id = _query_param_value(FIXTURE_QUERY_PARAM)
+    if fixture_id in fixture_ids:
+        return fixture_id
+    return None
+
+
+def sync_fixture_from_url() -> None:
+    fixture_ids = [fixture["id"] for fixture in FIXTURES]
+    fixture_id = _fixture_from_url(fixture_ids)
+    if fixture_id is not None:
+        set_selected_fixture_id(fixture_id)
+
+
+def set_selected_fixture_for_ui(fixture_id: str) -> bool:
+    set_selected_fixture_id(fixture_id)
+    return _update_query_param_if_changed(FIXTURE_QUERY_PARAM, fixture_id)
+
+
+def sync_fixture_to_url(fixture_id: str) -> bool:
+    return _update_query_param_if_changed(FIXTURE_QUERY_PARAM, fixture_id)
+
+
+def _hole_from_url(holes: list[int]) -> int | None:
+    raw_hole = _query_param_value(HOLE_QUERY_PARAM)
+    if not raw_hole:
+        return None
+    try:
+        hole = int(raw_hole)
+    except ValueError:
+        return None
+    if hole in holes:
+        return hole
+    return None
+
+
+def sync_active_hole_from_url(round_id: str, holes: list[int]) -> None:
+    hole = _hole_from_url(holes)
+    if hole is not None:
+        set_active_hole(round_id, hole, source="manual")
+
+
+def sync_active_hole_to_url(hole: int) -> bool:
+    return _update_query_param_if_changed(HOLE_QUERY_PARAM, hole)
+
+
+def set_active_hole_for_ui(round_id: str, hole: int, source: str = "manual") -> bool:
+    set_active_hole(round_id, hole, source=source)
+    return sync_active_hole_to_url(hole)
 
 
 def initialize_page(page_title: str) -> bool:
@@ -34,6 +102,7 @@ def initialize_page(page_title: str) -> bool:
         return False
 
     ensure_ui_state()
+    sync_fixture_from_url()
     return True
 
 
@@ -267,6 +336,7 @@ def render_shared_sidebar() -> dict[str, Any]:
     weekend_state = store["weekend_state"]
     fixture_ids = [fixture["id"] for fixture in FIXTURES]
     current_fixture_id = selected_fixture_id_for_ui(weekend_state)
+    sync_fixture_to_url(current_fixture_id)
 
     with st.sidebar:
         st.header("Round Context")
@@ -277,13 +347,14 @@ def render_shared_sidebar() -> dict[str, Any]:
             format_func=lambda fixture_id: format_fixture_label(get_fixture(fixture_id)),
         )
         if selected_fixture_id != current_fixture_id:
-            set_selected_fixture_id(selected_fixture_id)
+            set_selected_fixture_for_ui(selected_fixture_id)
             st.rerun()
 
         selected_fixture = get_fixture(selected_fixture_id)
         round_runtime = get_round_runtime(store["round_rows"], selected_fixture["id"])
         course_df = load_course_data(selected_fixture["course"])
         holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+        sync_active_hole_from_url(selected_fixture["id"], holes)
         round_state = build_round_state(
             round_id=selected_fixture["id"],
             holes=holes,
@@ -294,6 +365,7 @@ def render_shared_sidebar() -> dict[str, Any]:
         progress = round_state["progress"]
         completed_holes = int(progress["completed_count"])
         resume_hole = int(progress["resume_hole"])
+        sync_active_hole_to_url(int(round_state["active_hole"]))
 
         connection_status = store["persistence"]["status"]
         if str(connection_status.get("state", "")) != "connected":
@@ -389,6 +461,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
     course = selected_fixture["course"]
     course_df = load_course_data(course)
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+    sync_active_hole_from_url(selected_fixture_id, holes)
     round_state = build_round_state(
         round_id=selected_fixture_id,
         holes=holes,
@@ -419,7 +492,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         singles_matchups=weekend_state.get("singles_matchups", []),
     )
 
-    set_active_hole(selected_fixture_id, int(round_state["active_hole"]), source="derived")
+    set_active_hole_for_ui(selected_fixture_id, int(round_state["active_hole"]), source="derived")
     saved_results = load_saved_results(snapshot=snapshot)
     round_focus_by_fixture = build_round_focus_by_fixture(store, results_by_fixture)
 

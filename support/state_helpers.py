@@ -38,7 +38,23 @@ from support.round_progress import build_round_progress
 def persistence_snapshot(interactive: bool = False) -> dict[str, Any]:
     status = google_sheets.get_connection_status(interactive=interactive)
     if status.get("ok"):
-        return {"mode": "sheets", "status": status}
+        try:
+            return {
+                "mode": "sheets",
+                "status": status,
+                "scores_version": google_sheets.scores_version(),
+                "results_version": google_sheets.results_version(),
+            }
+        except GoogleSheetsError as exc:
+            return {
+                "mode": "session",
+                "status": {
+                    **status,
+                    "ok": False,
+                    "state": "error",
+                    "message": str(exc),
+                },
+            }
     return {"mode": "session", "status": status}
 
 
@@ -49,7 +65,7 @@ def load_app_store() -> dict[str, Any]:
             players_rows = google_sheets.load_players()
             round_rows = google_sheets.load_rounds()
             settings_rows = google_sheets.load_settings()
-            result_rows = google_sheets.load_result_payloads()
+            result_rows = google_sheets.load_result_payloads(version=str(snapshot.get("results_version", "")))
         except GoogleSheetsError as exc:
             snapshot = {
                 "mode": "session",
@@ -123,7 +139,7 @@ def load_round_score_rows(round_id: str, snapshot: dict[str, Any] | None = None)
     snapshot = snapshot or persistence_snapshot(interactive=False)
     if snapshot["mode"] == "sheets":
         try:
-            return google_sheets.load_scores(round_id)
+            return google_sheets.load_scores(round_id, version=str(snapshot.get("scores_version", "")))
         except GoogleSheetsError:
             return local_scores(round_id)
     return local_scores(round_id)
@@ -252,7 +268,7 @@ def load_saved_results(snapshot: dict[str, Any] | None = None) -> dict[str, dict
     snapshot = snapshot or persistence_snapshot(interactive=False)
     if snapshot["mode"] == "sheets":
         try:
-            payloads = google_sheets.load_result_payloads()
+            payloads = google_sheets.load_result_payloads(version=str(snapshot.get("results_version", "")))
         except GoogleSheetsError:
             payloads = local_results()
     else:

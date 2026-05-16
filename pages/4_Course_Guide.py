@@ -5,8 +5,7 @@ import streamlit as st
 from components.hole_explorer import render_hole_explorer
 from components.layout import render_chip_row, render_section_header
 from components.overview import render_course_briefing, render_course_scorecard, render_playing_handicap_summary
-from support.app_context import build_page_context, initialize_page, render_shared_sidebar
-from support.session import set_active_hole
+from support.app_context import build_page_context, initialize_page, render_shared_sidebar, set_active_hole_for_ui
 
 
 def _round_cursor_label(round_focus: dict[str, object]) -> str:
@@ -62,7 +61,7 @@ def main() -> None:
             current_active_hole=int(context["round_state"]["active_hole"]),
         )
         if explorer_state["selected_hole"] != int(context["round_state"]["active_hole"]):
-            set_active_hole(context["selected_fixture"]["id"], int(explorer_state["selected_hole"]), source="manual")
+            set_active_hole_for_ui(context["selected_fixture"]["id"], int(explorer_state["selected_hole"]))
             if explorer_state["open_live_scoring"]:
                 st.switch_page("pages/2_Live_Scoring.py")
             st.rerun()
