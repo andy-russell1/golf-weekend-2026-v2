@@ -15,6 +15,7 @@ from components.layout import (
     render_status_card,
 )
 from domain.formatting import format_points, format_score_value
+from domain.result_serialization import export_dataframe_bytes
 from domain.scoring import compute_optional_awards
 from domain.weekend_config import team_short_name
 
@@ -36,12 +37,44 @@ def _next_pending_hole(summary: pd.DataFrame, result_column: str = "hole_result"
     return int(pending.iloc[0]["hole"])
 
 
-def _match_leader_text(balance: int, left_label: str, right_label: str) -> tuple[str, str]:
-    if balance > 0:
-        return f"{left_label} are {abs(balance)} up", "red"
-    if balance < 0:
-        return f"{right_label} are {abs(balance)} up", "blue"
-    return "Match all square", "neutral"
+def _team_initial(team_id: str) -> str:
+    short_name = team_short_name(team_id)
+    return short_name[:1].upper() if short_name else team_id[:1].upper()
+
+
+def _compact_pairing_label(label: str) -> str:
+    if ":" in label:
+        return label.split(":", 1)[1].strip()
+    return label.strip()
+
+
+def _compact_match_state(balance: int, holes_played: int, complete: bool) -> str:
+    if holes_played <= 0:
+        return "Scoring not started"
+    if balance == 0:
+        return "Match halved" if complete else f"All Square through {holes_played}"
+    margin = abs(balance)
+    if complete:
+        return f"Won {margin} up"
+    return f"{margin} up through {holes_played}"
+
+
+def _compact_hole_result(value: object, replacements: dict[str, str]) -> str:
+    text = str(value or "Pending")
+    return replacements.get(text, text)
+
+
+def _download_bytes(result: dict[str, Any]) -> bytes:
+    export_bytes = result.get("export_bytes")
+    if isinstance(export_bytes, bytes):
+        return export_bytes
+    export_df = result.get("export_df")
+    if isinstance(export_df, pd.DataFrame):
+        return export_dataframe_bytes(export_df)
+    summary_df = result.get("summary_df")
+    if isinstance(summary_df, pd.DataFrame):
+        return export_dataframe_bytes(summary_df)
+    return b""
 
 
 def _render_live_answer(result: dict[str, Any]) -> None:
@@ -56,7 +89,13 @@ def _render_live_answer(result: dict[str, Any]) -> None:
         columns = st.columns(len(matches))
         for column, match in zip(columns, matches):
             next_hole = _next_pending_hole(match["summary_df"])
-            status, tone = _match_leader_text(match["current_balance"], match["players"][0], match["players"][1])
+            left_team, right_team = match.get("teams", ("red", "blue"))
+            if match["current_balance"] > 0:
+                status, tone = f"{match['players'][0]} {abs(match['current_balance'])} up", left_team
+            elif match["current_balance"] < 0:
+                status, tone = f"{match['players'][1]} {abs(match['current_balance'])} up", right_team
+            else:
+                status, tone = "Match all square", "neutral"
             support = "Result complete" if match["is_complete"] else f"Hole {next_hole} is next" if next_hole else "Awaiting next saved hole"
             with column:
                 render_status_card(match["label"], status, support, tone=tone)
@@ -103,8 +142,14 @@ def _render_live_answer(result: dict[str, Any]) -> None:
         return
     left_label, right_label = match["label"].split(" vs ")
     next_hole = _next_pending_hole(match["summary_df"])
-    status, tone = _match_leader_text(match["current_balance"], left_label, right_label)
-    support = "Result complete" if match["is_complete"] else f"Hole {next_hole} is next" if next_hole else "Awaiting next saved hole"
+    if match["current_balance"] > 0:
+        status, tone = _compact_pairing_label(left_label), "red"
+    elif match["current_balance"] < 0:
+        status, tone = _compact_pairing_label(right_label), "blue"
+    else:
+        status, tone = "All Square", "neutral"
+    state = _compact_match_state(int(match["current_balance"]), int(match["holes_played"]), bool(match["is_complete"]))
+    support = state if match["is_complete"] else f"{state} • Hole {next_hole} next" if next_hole else state
     render_status_card("4-Ball", status, support, tone=tone)
 
 
@@ -172,14 +217,33 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
         }
         for match in result.get("matches", []):
             st.markdown(f"### {match['label']}")
+            left_team, right_team = match.get("teams", ("red", "blue"))
+            result_replacements = {
+                match["players"][0]: team_short_name(left_team),
+                match["players"][1]: team_short_name(right_team),
+                "Halved": "Halved",
+                "Pending": "Pending",
+            }
             card_columns = st.columns(3)
             with card_columns[0]:
                 render_status_card("Match Status", match["current_status"], f"{match['holes_played']} holes played")
             with card_columns[1]:
-                render_metric_card("Last Hole", match["last_hole"]["result"] if match["last_hole"] else "Pending", f"Hole {match['last_hole']['hole']}" if match["last_hole"] else None)
+                render_metric_card(
+                    "Last Hole",
+                    _compact_hole_result(match["last_hole"]["result"], result_replacements) if match["last_hole"] else "Pending",
+                    f"Hole {match['last_hole']['hole']}" if match["last_hole"] else None,
+                )
             with card_columns[2]:
                 render_metric_card("Handicap Base", match["relative_to"] or "—", "playing off")
-            render_momentum_strip(match["momentum"], match["players"][0], match["players"][1])
+            render_momentum_strip(
+                match["momentum"],
+                match["players"][0],
+                match["players"][1],
+                positive_tone=left_team,
+                negative_tone=right_team,
+                positive_text=_team_initial(left_team),
+                negative_text=_team_initial(right_team),
+            )
             split_columns = st.columns(2)
             with split_columns[0]:
                 render_metric_card("Front 9", f"{match['splits']['front'][match['players'][0]]}-{match['splits']['front'][match['players'][1]]}", f"Halved {match['splits']['front']['Halved']}")
@@ -339,16 +403,38 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
         match = result.get("match")
         if match:
             headline_columns = st.columns(3)
+            left_label, right_label = match["label"].split(" vs ")
+            result_replacements = {
+                left_label: team_short_name("red"),
+                right_label: team_short_name("blue"),
+                "Halved": "Halved",
+                "Pending": "Pending",
+            }
+            if match["current_balance"] > 0:
+                match_status = _compact_pairing_label(left_label)
+                match_support = _compact_match_state(int(match["current_balance"]), int(match["holes_played"]), bool(match["is_complete"]))
+                match_tone = "red"
+            elif match["current_balance"] < 0:
+                match_status = _compact_pairing_label(right_label)
+                match_support = _compact_match_state(int(match["current_balance"]), int(match["holes_played"]), bool(match["is_complete"]))
+                match_tone = "blue"
+            else:
+                match_status = "All Square"
+                match_support = _compact_match_state(0, int(match["holes_played"]), bool(match["is_complete"]))
+                match_tone = "neutral"
             with headline_columns[0]:
-                render_status_card("Current Match", match["current_status"], f"{match['holes_played']} holes played")
+                render_status_card("Current Match", match_status, match_support, tone=match_tone)
             with headline_columns[1]:
-                render_metric_card("Last Hole", match["last_hole"]["result"] if match["last_hole"] else "Pending", f"Hole {match['last_hole']['hole']}" if match["last_hole"] else None)
+                render_metric_card(
+                    "Last Hole",
+                    _compact_hole_result(match["last_hole"]["result"], result_replacements) if match["last_hole"] else "Pending",
+                    f"Hole {match['last_hole']['hole']}" if match["last_hole"] else None,
+                )
             with headline_columns[2]:
                 render_metric_card("Handicap Base", match["relative_to"] or "Gross", "playing off")
 
-            render_momentum_strip(match["momentum"], match["label"].split(" vs ")[0], match["label"].split(" vs ")[1])
+            render_momentum_strip(match["momentum"], left_label, right_label)
             split_columns = st.columns(2)
-            left_label, right_label = match["label"].split(" vs ")
             with split_columns[0]:
                 render_metric_card("Front 9", f"{match['splits']['front'][left_label]}-{match['splits']['front'][right_label]}", f"Halved {match['splits']['front']['Halved']}")
             with split_columns[1]:
@@ -408,7 +494,7 @@ def render_leaderboard(result: dict[str, Any], show_gross_secondary: bool, show_
 
     st.download_button(
         "Download round summary (CSV)",
-        data=result["export_bytes"],
+        data=_download_bytes(result),
         file_name=f"{result['format_name'].lower().replace(' ', '-')}-summary.csv",
         mime="text/csv",
     )

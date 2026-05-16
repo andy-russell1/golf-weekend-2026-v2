@@ -38,11 +38,11 @@ def initialize_page(page_title: str) -> bool:
 
 def team_format_label(format_name: str, scramble_mode: str = "", scoring_mode: str = "standard") -> str:
     if format_name in {"Singles", "4-Ball"}:
-        return "match play"
+        return "Match Play"
     if format_name == "Stroke Play":
-        return "net better ball"
+        return "Net Better Ball"
     if format_name == "Skins":
-        return "net skins"
+        return "Net Skins"
     return format_name.lower()
 
 
@@ -53,6 +53,7 @@ def empty_result(format_name: str) -> dict[str, object]:
         "player_handicaps": pd.DataFrame(),
         "awarded_points": {"red": 0.0, "blue": 0.0},
         "projected_points": {"red": 0.0, "blue": 0.0},
+        "points_available": 0.0,
         "export_bytes": b"",
         "status_text": "Awaiting scores",
         "winner": "",
@@ -302,6 +303,7 @@ def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]
             )
         else:
             result = empty_result(round_runtime["format_name"])
+        result["points_available"] = float(round_runtime.get("points_available", fixture.get("points_available", 0.0)))
         results_by_fixture[fixture["id"]] = result
     return results_by_fixture
 

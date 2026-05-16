@@ -131,6 +131,15 @@ def round_points_summary(result: dict[str, Any]) -> dict[str, float]:
     }
 
 
+def _result_points_available(result: dict[str, Any], fallback_format: str) -> float:
+    if "points_available" in result:
+        try:
+            return float(result.get("points_available") or 0.0)
+        except (TypeError, ValueError):
+            pass
+    return points_available_for_format(str(result.get("format_name") or fallback_format))
+
+
 def compute_weekend_points(results_by_fixture: dict[str, dict[str, Any]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     totals = {"red": 0.0, "blue": 0.0}
@@ -146,7 +155,7 @@ def compute_weekend_points(results_by_fixture: dict[str, dict[str, Any]]) -> pd.
                 "Format": fixture_result.get("format_name", fixture["default_format"]),
                 "Red": awarded["red"],
                 "Blue": awarded["blue"],
-                "Points Available": points_available_for_format(fixture_result.get("format_name", fixture["default_format"])),
+                "Points Available": _result_points_available(fixture_result, fixture["default_format"]),
             }
         )
 
@@ -157,7 +166,7 @@ def compute_weekend_points(results_by_fixture: dict[str, dict[str, Any]]) -> pd.
             "Red": totals["red"],
             "Blue": totals["blue"],
             "Points Available": sum(
-                points_available_for_format(results_by_fixture.get(fixture["id"], {}).get("format_name", fixture["default_format"]))
+                _result_points_available(results_by_fixture.get(fixture["id"], {}), fixture["default_format"])
                 for fixture in FIXTURES
             ),
         }

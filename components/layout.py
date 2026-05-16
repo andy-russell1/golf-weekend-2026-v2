@@ -117,15 +117,30 @@ def render_chip_row(items: list[str], tone: str = "muted") -> None:
         st.markdown(f'<div class="chip-row">{chips}</div>', unsafe_allow_html=True)
 
 
-def render_momentum_strip(items: list[str], positive_label: str, negative_label: str) -> None:
+def _team_initial(team_id: str) -> str:
+    short_name = team_short_name(team_id)
+    return short_name[:1].upper() if short_name else team_id[:1].upper()
+
+
+def render_momentum_strip(
+    items: list[str],
+    positive_label: str,
+    negative_label: str,
+    positive_tone: str = "red",
+    negative_tone: str = "blue",
+    positive_text: str | None = None,
+    negative_text: str | None = None,
+) -> None:
+    positive_text = positive_text or _team_initial(positive_tone)
+    negative_text = negative_text or _team_initial(negative_tone)
     tokens: list[str] = []
     for item in items:
         if item == positive_label:
-            token_class = "momentum-red"
-            text = "R"
+            token_class = f"momentum-{positive_tone}"
+            text = positive_text
         elif item == negative_label:
-            token_class = "momentum-blue"
-            text = "B"
+            token_class = f"momentum-{negative_tone}"
+            text = negative_text
         elif item == "Halved":
             token_class = "momentum-half"
             text = "H"

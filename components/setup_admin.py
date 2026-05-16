@@ -10,7 +10,7 @@ from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
 from support.google_sheets import get_credentials, get_google_sheets_config, refresh_sheet_caches
 from support.state_helpers import clear_round, save_round_config, save_setting
-from domain.weekend_config import format_fixture_label
+from domain.weekend_config import SINGLES_MATCHUPS, format_fixture_label, points_available_for_format
 
 
 def render_setup_admin(
@@ -42,7 +42,7 @@ def render_setup_admin(
         tone="accent",
     )
 
-    connection_tab, setup_tab, players_tab, admin_tab = st.tabs(["Connection", "Round Setup", "Players & Handicaps", "Admin Actions"])
+    setup_tab, players_tab, connection_tab, admin_tab = st.tabs(["Round Setup", "Players & Handicaps", "Connection", "Admin Actions"])
 
     with connection_tab:
         render_connection_panel(persistence["status"], compact=False)
@@ -108,6 +108,14 @@ def render_setup_admin(
 
         with control_columns[1]:
             show_gross_secondary_value = st.toggle("Show Gross Best Ball In Match Centre", value=show_gross_secondary)
+            if updated_format == "Singles":
+                st.info("Singles is two parallel 1-point matches. The fixture carries 2 points in total.")
+                for match in SINGLES_MATCHUPS:
+                    left_index, right_index = match["players"]
+                    st.caption(
+                        f"{round_state['player_names'][left_index]} vs {round_state['player_names'][right_index]} "
+                        f"({float(match['point_value']):g} point)"
+                    )
 
         if st.button("Save Round Setup", width="stretch"):
             payload = {
@@ -120,7 +128,7 @@ def render_setup_admin(
                 "format_key": updated_format,
                 "format_label": updated_format,
                 "tee": updated_tee,
-                "points_available": selected_fixture["points_available"],
+                "points_available": points_available_for_format(updated_format),
                 "allowance_percent": updated_allowance,
                 "scoring_mode": "net",
                 "scramble_mode": "",

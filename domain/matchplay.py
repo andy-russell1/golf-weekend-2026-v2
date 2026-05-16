@@ -224,6 +224,8 @@ def score_singles(
         left_idx, right_idx = match["players"]
         left_name = player_names[left_idx]
         right_name = player_names[right_idx]
+        left_team = "red" if left_idx in TEAM_A_PLAYERS else "blue"
+        right_team = "red" if right_idx in TEAM_A_PLAYERS else "blue"
         left_column = f"player_{left_idx + 1}"
         right_column = f"player_{right_idx + 1}"
         match_frame = summary[["hole", "par", "si", "section", "hole_name", left_column, right_column, "status"]].copy()
@@ -260,14 +262,14 @@ def score_singles(
         awarded = _team_points_from_balance(
             current_balance,
             complete,
-            "red" if left_idx in TEAM_A_PLAYERS else "blue",
-            "red" if right_idx in TEAM_A_PLAYERS else "blue",
+            left_team,
+            right_team,
             match["point_value"],
         )
         projected = _projection_points_from_balance(
             current_balance,
-            "red" if left_idx in TEAM_A_PLAYERS else "blue",
-            "red" if right_idx in TEAM_A_PLAYERS else "blue",
+            left_team,
+            right_team,
             match["point_value"],
         )
         awarded_points = _add_points(awarded_points, awarded)
@@ -290,6 +292,7 @@ def score_singles(
             {
                 "label": f"{left_name} vs {right_name}",
                 "players": (left_name, right_name),
+                "teams": (left_team, right_team),
                 "relative_to": shot_info["relative_to"],
                 "holes_played": holes_played,
                 "current_balance": current_balance,

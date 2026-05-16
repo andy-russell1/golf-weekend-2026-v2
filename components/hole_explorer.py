@@ -66,7 +66,7 @@ def render_hole_explorer(
     content_columns = st.columns([1.35, 1], gap="large")
     with content_columns[0]:
         if image_record["available"]:
-            st.image(str(image_record["path"]), use_container_width=True)
+            st.image(str(image_record["path"]), width="stretch")
             if image_record.get("caption"):
                 st.caption(image_record["caption"])
         else:

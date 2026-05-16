@@ -104,7 +104,7 @@ FIXTURES: tuple[dict[str, Any], ...] = (
         "sort_key": "2026-05-25T10:36",
         "default_format": "Singles",
         "default_tee": "White",
-        "points_available": 1.0,
+        "points_available": 2.0,
         "scoring_mode": "net",
         "scramble_mode": "",
         "stableford_mode": "",
@@ -223,4 +223,6 @@ def format_fixture_label(fixture: dict[str, Any]) -> str:
 
 
 def points_available_for_format(format_name: str) -> float:
+    if format_name == "Singles":
+        return sum(float(match.get("point_value", 0.0)) for match in SINGLES_MATCHUPS)
     return 1.0

@@ -130,6 +130,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv/
 env/
 venv/
 ENV/
@@ -189,6 +190,10 @@ cython_debug/
 !.env.sample
 .streamlit/secrets.toml
 secrets/*
+secrets/*.json
+secrets/google_service_account.json
+secrets/google_oauth_client.json
+secrets/google_token.json
 !secrets/.gitkeep
 !secrets/README.md
 *.pem
@@ -199,3 +204,6 @@ secrets/*
 *.cer
 *.der
 *.token
+
+# Frontend/tooling dependencies
+node_modules/

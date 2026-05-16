@@ -13,7 +13,7 @@ from components.layout import (
     render_status_card,
 )
 from domain.formatting import format_handicap_index, format_points
-from domain.weekend_config import FIXTURES, TEAM_CONFIG, format_fixture_label, team_short_name
+from domain.weekend_config import FIXTURES, TEAM_CONFIG, team_short_name
 
 
 def _fixture_index(fixture_id: str) -> int:
@@ -49,12 +49,16 @@ def render_weekend_hub(
 
     next_fixture = _next_fixture(selected_fixture["id"])
     show_progress = int(round_focus["completed_holes"]) > 0
-    render_status_card("Current Round", round_focus["headline"], round_focus["detail"], tone=round_focus["tone"])
+    current_round_detail = (
+        f"{selected_fixture['date_label']} {selected_fixture['time_label']} • "
+        f"{fixture_formats[selected_fixture['id']]} • "
+        f"{fixture_tees[selected_fixture['id']]} tees • "
+        f"{round_focus['progress_text']}"
+    )
+    render_status_card("Current Round", selected_fixture["title"], current_round_detail, tone=round_focus["tone"])
     focus_items = [
-        format_fixture_label(selected_fixture),
-        fixture_formats[selected_fixture["id"]],
-        f"{fixture_tees[selected_fixture['id']]} tees",
-        round_focus["progress_text"],
+        round_focus["headline"],
+        round_focus["detail"],
     ]
     if show_progress:
         focus_items.append(round_focus["status_text"])

@@ -7,7 +7,7 @@ Standalone Streamlit version of the golf weekend app, extracted for deployment o
 - `4-Ball` as net better-ball match play
 - `Stroke Play` as net better-ball stroke play
 - `Skins` as net better-ball skins with carryovers
-- `Singles` as net singles match play
+- `Singles` as two parallel net singles match-play fixtures worth 1 point each
 
 Seeded weekend lineup:
 
@@ -36,6 +36,26 @@ streamlit run app.py
 ```
 
 If Google Sheets credentials are not configured, the app falls back to session-local storage.
+
+## Pre-trip checks
+
+Run the test suite from the repo root:
+
+```bash
+pytest
+```
+
+Launch locally:
+
+```bash
+streamlit run app.py
+```
+
+Confirm Google Sheets connection in `Setup / Admin` -> `Connection`. The connection panel should show `Sheets connection OK`; if it does not, confirm the deployed secrets are present and the workbook is shared with the service account email.
+
+Reset a round safely from `Setup / Admin` -> `Admin Actions`. Select the fixture in the sidebar first, tick the confirmation box, type `RESET`, then reset only that selected round.
+
+Score a hole on mobile from `Live Scoring`. Select the active hole, use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`.
 
 ## Product flow
 
