@@ -146,6 +146,7 @@ The app will seed headers and default rows for `players`, `rounds`, and `setting
 ## Notes
 
 - `Stroke Play` and `Skins` are UI labels; both use net better-ball team scoring.
+- Each round can use either full playing-handicap shot allocation or relative allocation from the lowest playing handicap. Existing default behaviour is preserved: `4-Ball` and `Singles` default to relative, while `Stroke Play` and `Skins` default to full.
 - `Skins` carries tied holes forward to the next outright winner.
 - If Google Sheets is unavailable, the UI remains usable in session fallback mode, but state is not shared across users.
 - Live scoring should be run against Google Sheets. Session fallback is visibly warned in the app and should not be treated as durable scoring storage.

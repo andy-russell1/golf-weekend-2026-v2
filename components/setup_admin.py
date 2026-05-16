@@ -21,6 +21,7 @@ from domain.bonus_competitions import (
     eligible_holes,
     normalize_bonus_competitions,
 )
+from domain.handicap import HANDICAP_ALLOCATION_OPTIONS, normalize_handicap_allocation
 from support.data_loader import load_course_data
 from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
@@ -58,6 +59,12 @@ def _fixture_label(fixture_id: str) -> str:
 
 def _fixture_for_round_id(round_id: str) -> dict[str, Any]:
     return next((candidate for candidate in FIXTURES if candidate["id"] == round_id), FIXTURES[0])
+
+
+def _handicap_allocation_label(value: str) -> str:
+    if value == "relative":
+        return "Relative shots"
+    return "Full shots"
 
 
 def _render_bonus_competition_editor(
@@ -159,6 +166,7 @@ def render_setup_admin(
     format_name = round_runtime["format_name"]
     tee_label = round_runtime["tee_label"]
     allowance_percent = int(round_runtime["allowance_percent"])
+    handicap_allocation = normalize_handicap_allocation(round_runtime.get("handicap_allocation", ""), format_name)
 
     render_section_header(
         "Setup / Admin",
@@ -170,14 +178,15 @@ def render_setup_admin(
             format_name,
             f"{tee_label} tees",
             f"Allowance {allowance_percent}%",
+            _handicap_allocation_label(handicap_allocation),
         ],
         tone="accent",
     )
     if persistence["mode"] != "sheets":
         render_session_fallback_warning()
 
-    setup_tab, bonus_tab, players_tab, connection_tab, admin_tab = st.tabs(
-        ["Round Setup", "Bonus Points", "Players & Handicaps", "Connection", "Admin Actions"]
+    setup_tab, players_tab, connection_tab, admin_tab = st.tabs(
+        ["Round Setup", "Players & Handicaps", "Connection", "Admin Actions"]
     )
 
     with connection_tab:
@@ -241,6 +250,16 @@ def render_setup_admin(
                 horizontal=True,
             )
             updated_allowance = st.slider("Handicap allowance %", min_value=0, max_value=100, value=allowance_percent, step=5)
+            updated_handicap_allocation = st.radio(
+                "Handicap allocation",
+                options=list(HANDICAP_ALLOCATION_OPTIONS),
+                index=list(HANDICAP_ALLOCATION_OPTIONS).index(
+                    normalize_handicap_allocation(handicap_allocation, updated_format)
+                ),
+                format_func=_handicap_allocation_label,
+                horizontal=True,
+            )
+            st.caption("Full uses each player's playing handicap. Relative plays everyone from the lowest handicap in the group.")
 
         with control_columns[1]:
             show_gross_secondary_value = st.toggle("Show Gross Best Ball In Match Centre", value=show_gross_secondary)
@@ -295,6 +314,7 @@ def render_setup_admin(
                 "tee": updated_tee,
                 "points_available": points_available_for_format(updated_format),
                 "allowance_percent": updated_allowance,
+                "handicap_allocation": normalize_handicap_allocation(updated_handicap_allocation, updated_format),
                 "scoring_mode": "net",
                 "scramble_mode": "",
                 "stableford_mode": "",
@@ -309,7 +329,7 @@ def render_setup_admin(
                 save_setting(SINGLES_MATCHUPS_SETTING_KEY, singles_matchups_to_json(updated_singles_matchups))
             st.rerun()
 
-        summary_columns = st.columns(4)
+        summary_columns = st.columns(5)
         with summary_columns[0]:
             render_metric_card("Round", selected_fixture["title"], selected_fixture["date_label"])
         with summary_columns[1]:
@@ -318,6 +338,8 @@ def render_setup_admin(
             render_metric_card("Tee", tee_label, "course rating source")
         with summary_columns[3]:
             render_metric_card("Allowance", f"{allowance_percent}%", "WHS playing handicap")
+        with summary_columns[4]:
+            render_metric_card("Shots", _handicap_allocation_label(handicap_allocation), "net allocation")
 
         if not tee_rating:
             st.info(f"No tee rating metadata is available for {tee_label} tees on this course.")
@@ -328,8 +350,8 @@ def render_setup_admin(
                 "Handicap, shot allocation, and round result calculations are active for the selected round.",
             )
 
-    with bonus_tab:
-        _render_bonus_competition_editor(bonus_competitions, fixture_tees)
+        with st.expander("Bonus Points", expanded=False):
+            _render_bonus_competition_editor(bonus_competitions, fixture_tees)
 
     with players_tab:
         st.caption("Keep labels explicit here so names and playing handicaps stay readable on a phone during the round.")

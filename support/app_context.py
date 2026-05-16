@@ -302,6 +302,7 @@ def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]
                 scramble_mode=round_runtime["scramble_mode"],
                 scoring_mode=round_runtime["scoring_mode"],
                 stableford_mode=round_runtime["stableford_mode"],
+                handicap_allocation=round_runtime["handicap_allocation"],
                 singles_matchups=singles_matchups,
             )
         else:
@@ -346,6 +347,8 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         format_name=round_runtime["format_name"],
         player_rows=selected_result.get("player_handicaps", pd.DataFrame()),
         player_names=player_names,
+        scoring_mode=round_runtime["scoring_mode"],
+        handicap_allocation=round_runtime["handicap_allocation"],
         singles_matchups=weekend_state.get("singles_matchups", []),
     )
 
@@ -365,6 +368,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
             "format_name": round_runtime["format_name"],
             "tee_label": round_runtime["tee_label"],
             "allowance_percent": round_runtime["allowance_percent"],
+            "handicap_allocation": round_runtime["handicap_allocation"],
             "scramble_mode": round_runtime["scramble_mode"],
             "scoring_mode": round_runtime["scoring_mode"],
             "stableford_mode": round_runtime["stableford_mode"],

@@ -29,6 +29,7 @@ from support.session import (
     update_local_setting,
     weekend_state_from_round_rows,
 )
+from domain.handicap import normalize_handicap_allocation
 from domain.weekend_config import FIXTURES, TEAM_CONFIG, get_fixture
 
 
@@ -95,12 +96,17 @@ def round_row_map(round_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]
 def get_round_runtime(round_rows: list[dict[str, Any]], fixture_id: str) -> dict[str, Any]:
     fixture = get_fixture(fixture_id)
     row = round_row_map(round_rows).get(fixture_id, {})
+    format_name = str(row.get("format_label") or row.get("format_key") or fixture["default_format"])
     return {
         "round_id": fixture_id,
         "round_order": int(float(row.get("round_order") or fixture.get("round_order", 0))),
-        "format_name": str(row.get("format_label") or row.get("format_key") or fixture["default_format"]),
+        "format_name": format_name,
         "tee_label": str(row.get("tee") or fixture["default_tee"]),
         "allowance_percent": int(float(row.get("allowance_percent") or 100)),
+        "handicap_allocation": normalize_handicap_allocation(
+            row.get("handicap_allocation") or fixture.get("handicap_allocation", ""),
+            format_name,
+        ),
         "scramble_mode": str(row.get("scramble_mode") or fixture.get("scramble_mode", "")),
         "scoring_mode": str(row.get("scoring_mode") or fixture.get("scoring_mode", "standard")),
         "stableford_mode": str(row.get("stableford_mode") or fixture.get("stableford_mode", "")),

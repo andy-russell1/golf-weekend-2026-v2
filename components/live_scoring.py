@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -179,6 +180,11 @@ def _persist_live_scores(
     save_scores_for_hole(round_runtime, hole, updated_scores, round_state)
     if result_payload:
         save_result_payload(round_runtime["round_id"], result_payload)
+    st.session_state["last_live_save_status"] = {
+        "round_id": round_runtime["round_id"],
+        "hole": hole,
+        "saved_at": datetime.now().strftime("%H:%M:%S"),
+    }
 
 
 def _render_bonus_competition_winners(
@@ -246,6 +252,7 @@ def render_live_scoring(
     scoring_mode = str(round_runtime.get("scoring_mode") or "net")
     scramble_mode = str(round_runtime.get("scramble_mode") or "")
     stableford_mode = str(round_runtime.get("stableford_mode") or "")
+    handicap_allocation = str(round_runtime.get("handicap_allocation") or "")
     player_names = list(round_state["player_names"])
     handicap_indexes = list(round_state["handicap_indexes"])
     player_ids = list(round_state["player_ids"])
@@ -325,8 +332,8 @@ def render_live_scoring(
                 st.markdown(f"**{label}**")
                 st.caption("No saved score" if default == "—" else f"Saved gross {default}")
             with score_row[1]:
-                st.button(
-                    "−",
+                  st.button(
+                      "-1",
                     key=f"{widget_key}::minus",
                     width="stretch",
                     help=f"Decrease {label}'s gross score",
@@ -376,6 +383,7 @@ def render_live_scoring(
             scramble_mode=scramble_mode,
             scoring_mode=scoring_mode,
             stableford_mode=stableford_mode,
+            handicap_allocation=handicap_allocation,
             singles_matchups=singles_matchups,
         )
         if tee_rating
@@ -405,38 +413,45 @@ def render_live_scoring(
         except GoogleSheetsError as exc:
             st.error(str(exc))
 
-    if st.button("Mark Pending", width="stretch"):
-        updated_scores = _update_scores(
-            round_state["scores"],
-            active_hole,
-            format_name=format_name,
-            values=entry_values,
-            force_pending=True,
+    with st.expander("Clear this hole", expanded=False):
+        st.warning("This clears all gross scores for the active hole and marks it pending.")
+        confirm_clear = st.checkbox(
+            f"I understand this will clear hole {active_hole}.",
+            key=f"confirm-clear-hole::{round_runtime['round_id']}::{active_hole}",
         )
-        try:
-            cleared_result = (
-                compute_round_results(
-                    course_df=course_df,
-                    format_name=format_name,
-                    score_df=updated_scores,
-                    player_names=player_names,
-                    player_ids=player_ids,
-                    handicap_indexes=handicap_indexes,
-                    tee_rating=tee_rating,
-                    allowance_percent=allowance_percent,
-                    scramble_mode=scramble_mode,
-                    scoring_mode=scoring_mode,
-                    stableford_mode=stableford_mode,
-                    singles_matchups=singles_matchups,
-                )
-                if tee_rating
-                else {}
+        if st.button("Clear Scores And Mark Pending", width="stretch", disabled=not confirm_clear):
+            updated_scores = _update_scores(
+                round_state["scores"],
+                active_hole,
+                format_name=format_name,
+                values=entry_values,
+                force_pending=True,
             )
-            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, cleared_result)
-            _clear_active_score_widget_values(round_runtime, course, active_hole, player_ids)
-            st.rerun()
-        except GoogleSheetsError as exc:
-            st.error(str(exc))
+            try:
+                cleared_result = (
+                    compute_round_results(
+                        course_df=course_df,
+                        format_name=format_name,
+                        score_df=updated_scores,
+                        player_names=player_names,
+                        player_ids=player_ids,
+                        handicap_indexes=handicap_indexes,
+                        tee_rating=tee_rating,
+                        allowance_percent=allowance_percent,
+                        scramble_mode=scramble_mode,
+                        scoring_mode=scoring_mode,
+                        stableford_mode=stableford_mode,
+                        handicap_allocation=handicap_allocation,
+                        singles_matchups=singles_matchups,
+                    )
+                    if tee_rating
+                    else {}
+                )
+                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, cleared_result)
+                _clear_active_score_widget_values(round_runtime, course, active_hole, player_ids)
+                st.rerun()
+            except GoogleSheetsError as exc:
+                st.error(str(exc))
 
     if has_unsaved_changes and preview_cards:
         st.markdown("#### Live Preview")

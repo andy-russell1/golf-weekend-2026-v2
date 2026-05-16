@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from domain.bonus_competitions import BONUS_COMPETITIONS_SETTING_KEY, bonus_competitions_from_json
+from domain.handicap import normalize_handicap_allocation
 from domain.weekend_config import (
     DEFAULT_ALLOWANCE_PERCENT,
     DEFAULT_SHOW_GROSS_SECONDARY,
@@ -247,6 +248,7 @@ def weekend_state_from_round_rows(round_rows: list[dict[str, Any]], settings_row
     fixture_scramble_modes: dict[str, str] = {}
     fixture_scoring_modes: dict[str, str] = {}
     fixture_stableford_modes: dict[str, str] = {}
+    fixture_handicap_allocations: dict[str, str] = {}
 
     for fixture in FIXTURES:
         row = next((candidate for candidate in round_rows if str(candidate.get("round_id")) == fixture["id"]), fixture)
@@ -254,9 +256,14 @@ def weekend_state_from_round_rows(round_rows: list[dict[str, Any]], settings_row
         fixture_formats[fixture_id] = str(row.get("format_label") or row.get("format_key") or fixture["default_format"])
         fixture_tees[fixture_id] = str(row.get("tee") or fixture["default_tee"])
         fixture_allowances[fixture_id] = int(float(row.get("allowance_percent") or DEFAULT_ALLOWANCE_PERCENT))
+        format_name = fixture_formats[fixture_id]
         fixture_scramble_modes[fixture_id] = str(row.get("scramble_mode") or fixture.get("scramble_mode", DEFAULT_SCRAMBLE_MODE))
         fixture_scoring_modes[fixture_id] = str(row.get("scoring_mode") or fixture.get("scoring_mode", DEFAULT_SCORING_MODE))
         fixture_stableford_modes[fixture_id] = str(row.get("stableford_mode") or fixture.get("stableford_mode", DEFAULT_STABLEFORD_MODE))
+        fixture_handicap_allocations[fixture_id] = normalize_handicap_allocation(
+            row.get("handicap_allocation") or fixture.get("handicap_allocation", ""),
+            format_name,
+        )
 
     return {
         "selected_fixture_id": settings_map["selected_fixture_id"],
@@ -266,6 +273,7 @@ def weekend_state_from_round_rows(round_rows: list[dict[str, Any]], settings_row
         "fixture_scramble_modes": fixture_scramble_modes,
         "fixture_scoring_modes": fixture_scoring_modes,
         "fixture_stableford_modes": fixture_stableford_modes,
+        "fixture_handicap_allocations": fixture_handicap_allocations,
         "show_gross_secondary": parse_bool(settings_map.get("show_gross_secondary"), DEFAULT_SHOW_GROSS_SECONDARY),
         "singles_matchups": singles_matchups_from_json(settings_map.get(SINGLES_MATCHUPS_SETTING_KEY, "")),
         "bonus_competitions": bonus_competitions_from_json(settings_map.get(BONUS_COMPETITIONS_SETTING_KEY, "")),

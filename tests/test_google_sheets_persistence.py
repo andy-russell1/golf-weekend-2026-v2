@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from support.google_sheets import _upsert_score_rows, save_round_result
+from support.google_sheets import _delete_rows_matching, _upsert_score_rows, save_round_result
 
 
 class GoogleSheetsPersistenceTests(unittest.TestCase):
@@ -77,6 +77,27 @@ class GoogleSheetsPersistenceTests(unittest.TestCase):
         payload_json = captured["values"][0][7]
         json.dumps(json.loads(payload_json))
         self.assertNotIn("export_bytes", payload_json)
+
+    def test_delete_rows_matching_deletes_from_bottom_up(self) -> None:
+        deleted_rows: list[int] = []
+
+        class FakeWorksheet:
+            def get_all_records(self, default_blank: str = "") -> list[dict[str, object]]:
+                return [
+                    {"round_id": "R1"},
+                    {"round_id": "R2"},
+                    {"round_id": "R1"},
+                ]
+
+            def delete_rows(self, row_number: int) -> None:
+                deleted_rows.append(row_number)
+
+        from unittest.mock import patch
+
+        with patch("support.google_sheets.get_worksheet", lambda _name: FakeWorksheet()):
+            _delete_rows_matching("scores", lambda row: row.get("round_id") == "R1")
+
+        self.assertEqual(deleted_rows, [4, 2])
 
 
 if __name__ == "__main__":

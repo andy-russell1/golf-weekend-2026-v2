@@ -4,7 +4,7 @@ from typing import Any
 
 import pandas as pd
 
-from domain.handicap import build_player_handicap_table, build_shot_allocation_table
+from domain.handicap import build_player_handicap_table, build_shot_allocation_table, normalize_handicap_allocation
 from domain.matchplay import score_four_ball, score_singles, score_skins, score_stroke_play
 from domain.weekend_config import FIXTURES, SINGLES_MATCHUPS, build_team_label, normalize_singles_matchups, points_available_for_format, team_name, team_short_name
 
@@ -20,6 +20,7 @@ def compute_round_results(
     scramble_mode: str = "",
     scoring_mode: str = "net",
     stableford_mode: str = "",
+    handicap_allocation: str = "",
     player_ids: list[str] | None = None,
     singles_matchups: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
@@ -35,14 +36,44 @@ def compute_round_results(
     if player_rows.empty:
         return {"format_name": format_name, "summary_df": pd.DataFrame(), "player_handicaps": player_rows}
 
+    allocation = normalize_handicap_allocation(handicap_allocation, format_name)
+
     if format_name == "Singles":
-        result = score_singles(course_df, score_df, player_rows, player_names, singles_matchups=singles_matchups)
+        result = score_singles(
+            course_df,
+            score_df,
+            player_rows,
+            player_names,
+            singles_matchups=singles_matchups,
+            handicap_allocation=allocation,
+        )
     elif format_name == "4-Ball":
-        result = score_four_ball(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
+        result = score_four_ball(
+            course_df,
+            score_df,
+            player_rows,
+            player_names,
+            scoring_mode=scoring_mode,
+            handicap_allocation=allocation,
+        )
     elif format_name == "Stroke Play":
-        result = score_stroke_play(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
+        result = score_stroke_play(
+            course_df,
+            score_df,
+            player_rows,
+            player_names,
+            scoring_mode=scoring_mode,
+            handicap_allocation=allocation,
+        )
     elif format_name == "Skins":
-        result = score_skins(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
+        result = score_skins(
+            course_df,
+            score_df,
+            player_rows,
+            player_names,
+            scoring_mode=scoring_mode,
+            handicap_allocation=allocation,
+        )
     else:
         result = {
             "format_name": format_name,
@@ -60,6 +91,7 @@ def compute_round_results(
     result["allowance_percent"] = allowance_percent
     result["scramble_mode"] = scramble_mode
     result["scoring_mode"] = scoring_mode
+    result["handicap_allocation"] = allocation
     result.setdefault("status_text", "Awaiting scores")
     result.setdefault("winner", "")
     result.setdefault("is_complete", False)
@@ -73,10 +105,13 @@ def build_hole_shot_views(
     player_names: list[str],
     scramble_mode: str = "",
     scoring_mode: str = "net",
+    handicap_allocation: str = "",
     singles_matchups: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     if course_df.empty or player_rows.empty:
         return []
+
+    allocation = normalize_handicap_allocation(handicap_allocation, format_name)
 
     if format_name == "Singles":
         groups: list[dict[str, Any]] = []
@@ -88,7 +123,11 @@ def build_hole_shot_views(
                 left_name: int(player_rows.loc[player_rows["Player"] == left_name, "Playing Handicap"].iloc[0]),
                 right_name: int(player_rows.loc[player_rows["Player"] == right_name, "Playing Handicap"].iloc[0]),
             }
-            shot_info = build_shot_allocation_table(course_df[["hole", "si"]], handicap_lookup)
+            shot_info = build_shot_allocation_table(
+                course_df[["hole", "si"]],
+                handicap_lookup,
+                relative_to_lowest=allocation == "relative",
+            )
             hole_rows = shot_info["table"].groupby("hole").apply(
                 lambda frame: {row["Player"]: int(row["shots_received"]) for _, row in frame.iterrows()}
             )
@@ -107,7 +146,7 @@ def build_hole_shot_views(
     shot_info = build_shot_allocation_table(
         course_df[["hole", "si"]],
         handicap_lookup,
-        relative_to_lowest=format_name == "4-Ball" and scoring_mode != "gross",
+        relative_to_lowest=allocation == "relative" and scoring_mode != "gross",
     )
     hole_rows = shot_info["table"].groupby("hole").apply(
         lambda frame: {row["Player"]: int(row["shots_received"]) for _, row in frame.iterrows()}

@@ -68,6 +68,7 @@ ROUNDS_HEADERS = (
     "tee",
     "points_available",
     "allowance_percent",
+    "handicap_allocation",
     "scoring_mode",
     "scramble_mode",
     "stableford_mode",
@@ -810,9 +811,20 @@ def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]]) ->
     refresh_sheet_caches()
 
 
+def _delete_rows_matching(worksheet_name: str, predicate: Any) -> None:
+    worksheet = get_worksheet(worksheet_name)
+    rows = worksheet.get_all_records(default_blank="")
+    row_numbers = [index + 2 for index, row in enumerate(rows) if predicate(row)]
+    for row_number in sorted(row_numbers, reverse=True):
+        worksheet.delete_rows(row_number)
+
+
 def clear_round_scores(round_id: str) -> None:
-    rows = [row for row in load_scores() if str(row.get("round_id", "")) != round_id]
-    _replace_rows("scores", SCORES_HEADERS, rows)
+    try:
+        _delete_rows_matching("scores", lambda row: str(row.get("round_id", "")) == round_id)
+        _delete_rows_matching("results", lambda row: str(row.get("round_id", "")) == round_id)
+    except Exception as exc:
+        raise SheetsWriteError(f"Failed to clear round `{round_id}`.") from exc
     refresh_sheet_caches()
 
 

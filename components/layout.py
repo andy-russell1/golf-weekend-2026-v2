@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+import html
+import re
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
 from domain.weekend_config import team_short_name
+
+
+def _escape_text(value: Any) -> str:
+    return html.escape("" if value is None else str(value), quote=True)
+
+
+def _class_suffix(value: str) -> str:
+    suffix = re.sub(r"[^a-zA-Z0-9_-]", "", str(value))
+    return suffix or "neutral"
 
 
 def load_css(css_path: Path) -> None:
@@ -19,9 +30,9 @@ def render_hero(title: str, subtitle: str, meta: str) -> None:
         f"""
         <div class="hero-card">
             <div class="hero-kicker">Golf Weekend 2026</div>
-            <div class="hero-title">{title}</div>
-            <div class="hero-subtitle">{subtitle}</div>
-            <div class="hero-meta">{meta}</div>
+            <div class="hero-title">{_escape_text(title)}</div>
+            <div class="hero-subtitle">{_escape_text(subtitle)}</div>
+            <div class="hero-meta">{_escape_text(meta)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -29,11 +40,11 @@ def render_hero(title: str, subtitle: str, meta: str) -> None:
 
 
 def render_section_header(title: str, subtitle: str | None = None) -> None:
-    subtitle_markup = f'<div class="section-subtitle">{subtitle}</div>' if subtitle else ""
+    subtitle_markup = f'<div class="section-subtitle">{_escape_text(subtitle)}</div>' if subtitle else ""
     st.markdown(
         f"""
         <div class="section-heading">
-            <div class="section-title">{title}</div>
+            <div class="section-title">{_escape_text(title)}</div>
             {subtitle_markup}
         </div>
         """,
@@ -42,12 +53,13 @@ def render_section_header(title: str, subtitle: str | None = None) -> None:
 
 
 def render_metric_card(label: str, value: Any, supporting: str | None = None, tone: str = "neutral") -> None:
-    supporting_markup = f'<div class="metric-support">{supporting}</div>' if supporting else ""
+    tone_class = _class_suffix(tone)
+    supporting_markup = f'<div class="metric-support">{_escape_text(supporting)}</div>' if supporting else ""
     st.markdown(
         f"""
-        <div class="metric-card metric-card-{tone}">
-            <div class="metric-label">{label}</div>
-            <div class="metric-value">{value}</div>
+        <div class="metric-card metric-card-{tone_class}">
+            <div class="metric-label">{_escape_text(label)}</div>
+            <div class="metric-value">{_escape_text(value)}</div>
             {supporting_markup}
         </div>
         """,
@@ -56,12 +68,13 @@ def render_metric_card(label: str, value: Any, supporting: str | None = None, to
 
 
 def render_status_card(title: str, status: str, supporting: str | None = None, tone: str = "neutral") -> None:
-    title_markup = f'<div class="status-title">{title}</div>' if title else ""
-    supporting_markup = f'<div class="status-support">{supporting}</div>' if supporting else ""
+    tone_class = _class_suffix(tone)
+    title_markup = f'<div class="status-title">{_escape_text(title)}</div>' if title else ""
+    supporting_markup = f'<div class="status-support">{_escape_text(supporting)}</div>' if supporting else ""
     card_markup = (
-        f'<div class="status-card status-card-{tone}">'
+        f'<div class="status-card status-card-{tone_class}">'
         f"{title_markup}"
-        f'<div class="status-value">{status}</div>'
+        f'<div class="status-value">{_escape_text(status)}</div>'
         f"{supporting_markup}"
         "</div>"
     )
@@ -74,20 +87,20 @@ def render_fixture_card(
     schedule: str,
     status: str,
     red_points: str,
-    blue_points: str,
+      blue_points: str,
 ) -> None:
     st.markdown(
         f"""
         <div class="fixture-card">
             <div class="fixture-header">
-                <div class="fixture-title">{title}</div>
-                <div class="fixture-format">{format_name}</div>
+                <div class="fixture-title">{_escape_text(title)}</div>
+                <div class="fixture-format">{_escape_text(format_name)}</div>
             </div>
-            <div class="fixture-schedule">{schedule}</div>
-            <div class="fixture-status">{status}</div>
+            <div class="fixture-schedule">{_escape_text(schedule)}</div>
+            <div class="fixture-status">{_escape_text(status)}</div>
             <div class="fixture-points">
-                <span class="fixture-point fixture-point-red">{team_short_name("red")} {red_points}</span>
-                <span class="fixture-point fixture-point-blue">{team_short_name("blue")} {blue_points}</span>
+                <span class="fixture-point fixture-point-red">{_escape_text(team_short_name("red"))} {_escape_text(red_points)}</span>
+                <span class="fixture-point fixture-point-blue">{_escape_text(team_short_name("blue"))} {_escape_text(blue_points)}</span>
             </div>
         </div>
         """,
@@ -96,15 +109,15 @@ def render_fixture_card(
 
 
 def render_badge(label: str, tone: str = "muted") -> None:
-    st.markdown(f'<span class="badge badge-{tone}">{label}</span>', unsafe_allow_html=True)
+    st.markdown(f'<span class="badge badge-{_class_suffix(tone)}">{_escape_text(label)}</span>', unsafe_allow_html=True)
 
 
 def render_placeholder_panel(title: str, body: str) -> None:
     st.markdown(
         f"""
         <div class="placeholder-panel">
-            <div class="placeholder-title">{title}</div>
-            <div class="placeholder-body">{body}</div>
+            <div class="placeholder-title">{_escape_text(title)}</div>
+            <div class="placeholder-body">{_escape_text(body)}</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -112,7 +125,8 @@ def render_placeholder_panel(title: str, body: str) -> None:
 
 
 def render_chip_row(items: list[str], tone: str = "muted") -> None:
-    chips = "".join(f'<span class="info-chip info-chip-{tone}">{item}</span>' for item in items if item)
+    tone_class = _class_suffix(tone)
+    chips = "".join(f'<span class="info-chip info-chip-{tone_class}">{_escape_text(item)}</span>' for item in items if item)
     if chips:
         st.markdown(f'<div class="chip-row">{chips}</div>', unsafe_allow_html=True)
 
@@ -136,10 +150,10 @@ def render_momentum_strip(
     tokens: list[str] = []
     for item in items:
         if item == positive_label:
-            token_class = f"momentum-{positive_tone}"
+            token_class = f"momentum-{_class_suffix(positive_tone)}"
             text = positive_text
         elif item == negative_label:
-            token_class = f"momentum-{negative_tone}"
+            token_class = f"momentum-{_class_suffix(negative_tone)}"
             text = negative_text
         elif item == "Halved":
             token_class = "momentum-half"
@@ -147,7 +161,7 @@ def render_momentum_strip(
         else:
             token_class = "momentum-pending"
             text = "·"
-        tokens.append(f'<span class="momentum-pill {token_class}">{text}</span>')
+        tokens.append(f'<span class="momentum-pill {token_class}">{_escape_text(text)}</span>')
     st.markdown(f'<div class="momentum-strip">{"".join(tokens)}</div>', unsafe_allow_html=True)
 
 

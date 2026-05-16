@@ -168,6 +168,7 @@ def default_rounds_sheet_rows() -> list[dict[str, Any]]:
             "tee": fixture["default_tee"],
             "points_available": fixture["points_available"],
             "allowance_percent": DEFAULT_ALLOWANCE_PERCENT,
+            "handicap_allocation": "relative" if fixture["default_format"] in {"Singles", "4-Ball"} else "full",
             "scoring_mode": fixture["scoring_mode"],
             "scramble_mode": fixture["scramble_mode"],
             "stableford_mode": fixture["stableford_mode"],

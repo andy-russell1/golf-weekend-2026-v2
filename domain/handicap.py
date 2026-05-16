@@ -8,6 +8,26 @@ import pandas as pd
 from domain.weekend_config import TEAM_CONFIG, team_for_player
 
 
+HANDICAP_ALLOCATION_FULL = "full"
+HANDICAP_ALLOCATION_RELATIVE = "relative"
+HANDICAP_ALLOCATION_OPTIONS = (HANDICAP_ALLOCATION_FULL, HANDICAP_ALLOCATION_RELATIVE)
+
+
+def default_handicap_allocation_for_format(format_name: str) -> str:
+    if format_name in {"Singles", "4-Ball"}:
+        return HANDICAP_ALLOCATION_RELATIVE
+    if format_name in {"Stroke Play", "Skins"}:
+        return HANDICAP_ALLOCATION_FULL
+    return HANDICAP_ALLOCATION_FULL
+
+
+def normalize_handicap_allocation(value: Any, format_name: str) -> str:
+    candidate = str(value or "").strip().lower()
+    if candidate in HANDICAP_ALLOCATION_OPTIONS:
+        return candidate
+    return default_handicap_allocation_for_format(format_name)
+
+
 def round_half_up(value: float) -> int:
     return int(Decimal(str(value)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 

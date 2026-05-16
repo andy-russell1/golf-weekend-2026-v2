@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import unittest
 
-<<<<<<< Updated upstream
 from domain.bonus_competitions import (
     bonus_competitions_from_json,
     bonus_competitions_to_json,
@@ -13,10 +12,7 @@ from domain.bonus_competitions import (
     eligible_holes,
     update_bonus_winner,
 )
-=======
-from domain.bonus_competitions import bonus_point_rows, default_bonus_competitions, eligible_holes, update_bonus_winner
 from domain.handicap import strokes_on_hole
->>>>>>> Stashed changes
 from domain.result_serialization import summary_payload_for_storage
 from domain.scoring import compute_round_results, compute_weekend_race
 from domain.weekend_config import (
@@ -185,6 +181,74 @@ class ScoringRegressionTests(unittest.TestCase):
         handicaps = result["player_handicaps"].set_index("Player")
         first_hole = summary.iloc[0]
         stroke_index = int(first_hole["si"])
+        for player_name in PLAYER_NAMES:
+            playing_handicap = int(handicaps.loc[player_name, "Playing Handicap"])
+            expected_net = 5 - strokes_on_hole(playing_handicap, stroke_index)
+            self.assertEqual(int(first_hole[f"{player_name}_net"]), expected_net)
+
+    def test_stroke_play_can_use_relative_handicap_allocation(self) -> None:
+        course_df = load_course_data("clyne")
+        tee_rating = get_tee_rating("clyne", "White")
+        holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+        frame = blank_scores(holes, "Stroke Play")
+        for hole in holes:
+            frame.loc[frame["hole"] == hole, "status"] = "Complete"
+            for index in range(1, 5):
+                frame.loc[frame["hole"] == hole, f"player_{index}"] = 5
+
+        result = compute_round_results(
+            course_df=course_df,
+            format_name="Stroke Play",
+            score_df=frame,
+            player_names=PLAYER_NAMES,
+            player_ids=PLAYER_IDS,
+            handicap_indexes=HANDICAP_INDEXES,
+            tee_rating=tee_rating,
+            allowance_percent=100,
+            scoring_mode="net",
+            handicap_allocation="relative",
+        )
+
+        summary = result["summary_df"]
+        handicaps = result["player_handicaps"].set_index("Player")
+        lowest_handicap = int(handicaps["Playing Handicap"].min())
+        first_hole = summary.iloc[0]
+        stroke_index = int(first_hole["si"])
+        self.assertEqual(result["handicap_allocation"], "relative")
+        for player_name in PLAYER_NAMES:
+            relative_handicap = int(handicaps.loc[player_name, "Playing Handicap"]) - lowest_handicap
+            expected_net = 5 - strokes_on_hole(relative_handicap, stroke_index)
+            self.assertEqual(int(first_hole[f"{player_name}_net"]), expected_net)
+
+    def test_four_ball_can_use_full_handicap_allocation(self) -> None:
+        course_df = load_course_data("rolls_monmouth")
+        tee_rating = get_tee_rating("rolls_monmouth", "White")
+        holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
+        frame = blank_scores(holes, "4-Ball")
+        for hole in holes:
+            frame.loc[frame["hole"] == hole, "status"] = "Complete"
+            for index in range(1, 5):
+                frame.loc[frame["hole"] == hole, f"player_{index}"] = 5
+
+        result = compute_round_results(
+            course_df=course_df,
+            format_name="4-Ball",
+            score_df=frame,
+            player_names=PLAYER_NAMES,
+            player_ids=PLAYER_IDS,
+            handicap_indexes=HANDICAP_INDEXES,
+            tee_rating=tee_rating,
+            allowance_percent=100,
+            scoring_mode="net",
+            handicap_allocation="full",
+        )
+
+        summary = result["summary_df"]
+        handicaps = result["player_handicaps"].set_index("Player")
+        first_hole = summary.iloc[0]
+        stroke_index = int(first_hole["si"])
+        self.assertEqual(result["handicap_allocation"], "full")
+        self.assertIsNone(result["match"]["relative_to"])
         for player_name in PLAYER_NAMES:
             playing_handicap = int(handicaps.loc[player_name, "Playing Handicap"])
             expected_net = 5 - strokes_on_hole(playing_handicap, stroke_index)

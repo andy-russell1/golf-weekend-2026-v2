@@ -56,13 +56,8 @@ def render_weekend_hub(
         f"{round_focus['progress_text']}"
     )
     render_status_card("Current Round", selected_fixture["title"], current_round_detail, tone=round_focus["tone"])
-    focus_items = [
-        round_focus["headline"],
-        round_focus["detail"],
-    ]
     if show_progress:
-        focus_items.append(round_focus["status_text"])
-    render_chip_row(focus_items, tone="accent")
+        render_chip_row([round_focus["status_text"]], tone="accent")
     action_columns = st.columns(2)
     with action_columns[0]:
         render_page_action(
@@ -90,9 +85,9 @@ def render_weekend_hub(
 
     points_row_one = st.columns(2)
     with points_row_one[0]:
-        render_metric_card("Weekend Points", format_points(weekend_race["red_points"]), team_short_name("red"), tone="red")
+        render_metric_card(f"{team_short_name('red')} Points", format_points(weekend_race["red_points"]), "weekend", tone="red")
     with points_row_one[1]:
-        render_metric_card("Weekend Points", format_points(weekend_race["blue_points"]), team_short_name("blue"), tone="blue")
+        render_metric_card(f"{team_short_name('blue')} Points", format_points(weekend_race["blue_points"]), "weekend", tone="blue")
     points_row_two = st.columns(2)
     with points_row_two[0]:
         render_metric_card("Remaining", format_points(weekend_race["remaining_points"]), "points available")

@@ -8,7 +8,7 @@ from domain.formatting import format_match_status
 from domain.result_serialization import export_dataframe_bytes
 from domain.weekend_config import SINGLES_MATCHUPS, TEAM_CONFIG, build_team_label, normalize_singles_matchups
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS
-from domain.handicap import build_shot_allocation_table
+from domain.handicap import build_shot_allocation_table, normalize_handicap_allocation
 
 
 def _coerce_int_series(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
@@ -218,6 +218,7 @@ def score_singles(
     player_rows: pd.DataFrame,
     player_names: list[str],
     singles_matchups: list[dict[str, Any]] | None = None,
+    handicap_allocation: str = "",
 ) -> dict[str, Any]:
     summary = course_df[["hole", "par", "si", "section", "hole_name"]].copy()
     summary = summary.merge(score_df, on="hole", how="left")
@@ -242,7 +243,11 @@ def score_singles(
             left_name: int(player_rows.loc[player_rows["Player Index"] == left_idx, "Playing Handicap"].iloc[0]),
             right_name: int(player_rows.loc[player_rows["Player Index"] == right_idx, "Playing Handicap"].iloc[0]),
         }
-        shot_info = build_shot_allocation_table(course_df[["hole", "si"]], handicap_lookup)
+        shot_info = build_shot_allocation_table(
+            course_df[["hole", "si"]],
+            handicap_lookup,
+            relative_to_lowest=normalize_handicap_allocation(handicap_allocation, "Singles") == "relative",
+        )
         allocation = shot_info["table"].pivot(index="hole", columns="Player", values="shots_received").reset_index()
         match_frame = match_frame.merge(allocation, on="hole", how="left")
         match_frame["left_shots"] = pd.to_numeric(match_frame[left_name], errors="coerce").fillna(0).astype(int)
@@ -365,13 +370,15 @@ def score_four_ball(
     player_rows: pd.DataFrame,
     player_names: list[str],
     scoring_mode: str = "net",
+    handicap_allocation: str = "",
 ) -> dict[str, Any]:
+    allocation = normalize_handicap_allocation(handicap_allocation, "4-Ball")
     context = _build_team_better_ball_summary(
         course_df,
         score_df,
         player_rows,
         player_names,
-        shot_mode="relative" if scoring_mode != "gross" else "gross",
+        shot_mode=allocation if scoring_mode != "gross" else "gross",
     )
     summary = context["summary"]
     played = context["played"]
@@ -460,13 +467,15 @@ def score_stroke_play(
     player_rows: pd.DataFrame,
     player_names: list[str],
     scoring_mode: str = "net",
+    handicap_allocation: str = "",
 ) -> dict[str, Any]:
+    allocation = normalize_handicap_allocation(handicap_allocation, "Stroke Play")
     context = _build_team_better_ball_summary(
         course_df,
         score_df,
         player_rows,
         player_names,
-        shot_mode="full" if scoring_mode != "gross" else "gross",
+        shot_mode=allocation if scoring_mode != "gross" else "gross",
     )
     summary = context["summary"]
     played = context["played"]
@@ -556,13 +565,15 @@ def score_skins(
     player_rows: pd.DataFrame,
     player_names: list[str],
     scoring_mode: str = "net",
+    handicap_allocation: str = "",
 ) -> dict[str, Any]:
+    allocation = normalize_handicap_allocation(handicap_allocation, "Skins")
     context = _build_team_better_ball_summary(
         course_df,
         score_df,
         player_rows,
         player_names,
-        shot_mode="full" if scoring_mode != "gross" else "gross",
+        shot_mode=allocation if scoring_mode != "gross" else "gross",
     )
     summary = context["summary"]
     played = context["played"]

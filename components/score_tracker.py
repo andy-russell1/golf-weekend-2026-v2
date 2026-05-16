@@ -144,6 +144,7 @@ def render_full_card_editor(
                 scramble_mode=str(round_runtime["scramble_mode"]),
                 scoring_mode=str(round_runtime["scoring_mode"]),
                 stableford_mode=str(round_runtime["stableford_mode"]),
+                handicap_allocation=str(round_runtime.get("handicap_allocation") or ""),
                 singles_matchups=singles_matchups,
             )
             save_result_payload(str(round_runtime["round_id"]), result)
