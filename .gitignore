@@ -185,6 +185,7 @@ cython_debug/
 .DS_Store
 
 # Project local secrets
+.env
 .env.*
 !.env.example
 !.env.sample

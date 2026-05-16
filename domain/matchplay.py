@@ -137,6 +137,7 @@ def _build_team_better_ball_summary(
     score_df: pd.DataFrame,
     player_rows: pd.DataFrame,
     player_names: list[str],
+    shot_mode: str = "relative",
 ) -> dict[str, Any]:
     summary = course_df[["hole", "par", "si", "section", "hole_name"]].copy()
     summary = summary.merge(score_df, on="hole", how="left")
@@ -144,7 +145,13 @@ def _build_team_better_ball_summary(
     team_a_label = build_team_label("red", player_names)
     team_b_label = build_team_label("blue", player_names)
     handicap_lookup = {row["Player"]: int(row["Playing Handicap"]) for _, row in player_rows.iterrows()}
-    shot_info = build_shot_allocation_table(course_df[["hole", "si"]], handicap_lookup)
+    if shot_mode == "gross":
+        handicap_lookup = {player: 0 for player in handicap_lookup}
+    shot_info = build_shot_allocation_table(
+        course_df[["hole", "si"]],
+        handicap_lookup,
+        relative_to_lowest=shot_mode == "relative",
+    )
     allocations = shot_info["table"].pivot(index="hole", columns="Player", values="shots_received").reset_index()
     summary = summary.merge(allocations, on="hole", how="left")
 
@@ -357,8 +364,15 @@ def score_four_ball(
     score_df: pd.DataFrame,
     player_rows: pd.DataFrame,
     player_names: list[str],
+    scoring_mode: str = "net",
 ) -> dict[str, Any]:
-    context = _build_team_better_ball_summary(course_df, score_df, player_rows, player_names)
+    context = _build_team_better_ball_summary(
+        course_df,
+        score_df,
+        player_rows,
+        player_names,
+        shot_mode="relative" if scoring_mode != "gross" else "gross",
+    )
     summary = context["summary"]
     played = context["played"]
     team_a_label = context["team_a_label"]
@@ -445,8 +459,15 @@ def score_stroke_play(
     score_df: pd.DataFrame,
     player_rows: pd.DataFrame,
     player_names: list[str],
+    scoring_mode: str = "net",
 ) -> dict[str, Any]:
-    context = _build_team_better_ball_summary(course_df, score_df, player_rows, player_names)
+    context = _build_team_better_ball_summary(
+        course_df,
+        score_df,
+        player_rows,
+        player_names,
+        shot_mode="full" if scoring_mode != "gross" else "gross",
+    )
     summary = context["summary"]
     played = context["played"]
     team_a_label = context["team_a_label"]
@@ -534,8 +555,15 @@ def score_skins(
     score_df: pd.DataFrame,
     player_rows: pd.DataFrame,
     player_names: list[str],
+    scoring_mode: str = "net",
 ) -> dict[str, Any]:
-    context = _build_team_better_ball_summary(course_df, score_df, player_rows, player_names)
+    context = _build_team_better_ball_summary(
+        course_df,
+        score_df,
+        player_rows,
+        player_names,
+        shot_mode="full" if scoring_mode != "gross" else "gross",
+    )
     summary = context["summary"]
     played = context["played"]
     team_a_label = context["team_a_label"]

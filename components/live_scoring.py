@@ -383,8 +383,12 @@ def render_live_scoring(
     )
     has_unsaved_changes = any(_score_changed(current_row[column], entry_values[column]) for column in score_columns)
     preview_cards = _hole_preview(preview_result, format_name, active_hole, player_names)
+    hole_is_complete = _status_for_values(list(entry_values.values()), required_count=len(score_columns)) == "Complete"
 
-    if st.button("Save + Next", width="stretch", type="primary"):
+    if not hole_is_complete:
+        st.warning("Enter all required gross scores before using Save + Next. Use Save Hole if you intentionally need to keep this hole pending or in progress.")
+
+    if st.button("Save + Next", width="stretch", type="primary", disabled=not hole_is_complete):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
             _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)

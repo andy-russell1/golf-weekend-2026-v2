@@ -31,6 +31,7 @@ except ModuleNotFoundError as exc:
     WorksheetNotFound = Exception
     GOOGLE_SHEETS_IMPORT_ERROR = exc
 
+from domain.result_serialization import to_serializable
 from domain.weekend_config import (
     DEFAULT_WORKBOOK_NAME,
     default_players_sheet_rows,
@@ -697,6 +698,49 @@ def _replace_rows(worksheet_name: str, headers: tuple[str, ...], rows: list[dict
         raise SheetsWriteError(f"Failed to update worksheet `{worksheet_name}`.") from exc
 
 
+def _score_row_key(row: dict[str, Any]) -> tuple[str, int, str]:
+    return (str(row.get("round_id", "")), int(float(row.get("hole") or 0)), str(row.get("player_id", "")))
+
+
+def _normalise_score_replacement(round_id: str, hole: int, row: dict[str, object]) -> dict[str, Any]:
+    return {
+        **row,
+        "round_id": round_id,
+        "hole": hole,
+        "status": row.get("status", "Pending"),
+        "updated_at": _utc_timestamp(),
+    }
+
+
+def _upsert_score_rows(
+    existing_rows: list[dict[str, Any]],
+    round_id: str,
+    hole: int,
+    rows: list[dict[str, object]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    replacements: dict[tuple[str, int, str], dict[str, Any]] = {}
+    for row in rows:
+        replacement = _normalise_score_replacement(round_id, hole, row)
+        replacements[_score_row_key(replacement)] = replacement
+    updated_rows: list[dict[str, Any]] = []
+    appended_rows: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, int, str]] = set()
+
+    for existing in existing_rows:
+        key = _score_row_key(existing)
+        if key in replacements:
+            updated_rows.append({**existing, **replacements[key]})
+            seen_keys.add(key)
+        else:
+            updated_rows.append(existing)
+
+    for key, replacement in replacements.items():
+        if key not in seen_keys:
+            appended_rows.append(replacement)
+
+    return updated_rows, appended_rows
+
+
 def save_players(rows: list[dict[str, Any]]) -> None:
     normalized_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -743,31 +787,26 @@ def update_setting(key: str, value: str) -> None:
 
 
 def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]]) -> None:
-    existing_rows = load_scores()
-    row_key = lambda row: (str(row.get("round_id", "")), int(float(row.get("hole") or 0)), str(row.get("player_id", "")))
-    replacements = {
-        (round_id, hole, str(row.get("player_id", ""))): {
-            **row,
-            "round_id": round_id,
-            "hole": hole,
-            "status": row.get("status", "Pending"),
-            "updated_at": _utc_timestamp(),
-        }
-        for row in rows
-    }
-    updated_rows: list[dict[str, Any]] = []
-    seen_keys: set[tuple[str, int, str]] = set()
-    for row in existing_rows:
-        key = row_key(row)
-        if key in replacements:
-            updated_rows.append({**row, **replacements[key]})
-            seen_keys.add(key)
-        else:
-            updated_rows.append(row)
-    for key, replacement in replacements.items():
-        if key not in seen_keys:
-            updated_rows.append(replacement)
-    _replace_rows("scores", SCORES_HEADERS, updated_rows)
+    worksheet = get_worksheet("scores")
+    try:
+        existing_rows = worksheet.get_all_records(default_blank="")
+        updated_rows, appended_rows = _upsert_score_rows(existing_rows, round_id, hole, rows)
+        existing_index = {_score_row_key(row): index + 2 for index, row in enumerate(existing_rows)}
+        original_by_key = {_score_row_key(row): row for row in existing_rows}
+
+        for row in updated_rows:
+            key = _score_row_key(row)
+            if key not in existing_index or row == original_by_key.get(key):
+                continue
+            worksheet.update(
+                f"A{existing_index[key]}",
+                _records_to_sheet_values(SCORES_HEADERS, [row])[1:],
+            )
+
+        if appended_rows:
+            worksheet.append_rows(_records_to_sheet_values(SCORES_HEADERS, appended_rows)[1:])
+    except Exception as exc:
+        raise SheetsWriteError("Failed to save hole scores.") from exc
     refresh_sheet_caches()
 
 
@@ -778,29 +817,32 @@ def clear_round_scores(round_id: str) -> None:
 
 
 def save_round_result(round_id: str, result_payload: dict[str, object]) -> None:
-    results = load_results()
-    serialized_payload = json.dumps(result_payload)
+    safe_payload = to_serializable(result_payload)
+    serialized_payload = json.dumps(safe_payload)
     new_row = {
         "round_id": round_id,
-        "format_key": str(result_payload.get("format_name", "")),
-        "status_text": str(result_payload.get("status_text", "")),
-        "winner": str(result_payload.get("winner", "")),
-        "red_points": result_payload.get("red_points", 0),
-        "blue_points": result_payload.get("blue_points", 0),
-        "is_complete": _normalize_bool_string(result_payload.get("is_complete", False)),
+        "format_key": str(safe_payload.get("format_name", "")),
+        "status_text": str(safe_payload.get("status_text", "")),
+        "winner": str(safe_payload.get("winner", "")),
+        "red_points": safe_payload.get("red_points", 0),
+        "blue_points": safe_payload.get("blue_points", 0),
+        "is_complete": _normalize_bool_string(safe_payload.get("is_complete", False)),
         "payload_json": serialized_payload,
     }
-    updated_rows: list[dict[str, Any]] = []
-    replaced = False
-    for row in results:
-        if str(row.get("round_id")) == round_id:
-            updated_rows.append({**row, **new_row})
-            replaced = True
+    worksheet = get_worksheet("results")
+    try:
+        results = worksheet.get_all_records(default_blank="")
+        row_number = next((index + 2 for index, row in enumerate(results) if str(row.get("round_id")) == round_id), None)
+        if row_number is None:
+            worksheet.append_rows(_records_to_sheet_values(RESULTS_HEADERS, [new_row])[1:])
         else:
-            updated_rows.append(row)
-    if not replaced:
-        updated_rows.append(new_row)
-    _replace_rows("results", RESULTS_HEADERS, updated_rows)
+            existing = results[row_number - 2]
+            worksheet.update(
+                f"A{row_number}",
+                _records_to_sheet_values(RESULTS_HEADERS, [{**existing, **new_row}])[1:],
+            )
+    except Exception as exc:
+        raise SheetsWriteError("Failed to save round result.") from exc
     refresh_sheet_caches()
 
 

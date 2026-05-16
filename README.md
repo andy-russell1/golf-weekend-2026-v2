@@ -35,7 +35,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-If Google Sheets credentials are not configured, the app falls back to session-local storage.
+If Google Sheets credentials are not configured, the app falls back to session-local storage. That fallback is useful for demos only: live scores are not shared across users/devices and may be lost on refresh or restart.
 
 ## Pre-trip checks
 
@@ -92,15 +92,17 @@ client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/your-s
 universe_domain = "googleapis.com"
 ```
 
-## Local credential fallbacks
+## Credential handling
 
-The app also supports:
+Do not commit Google service-account JSON files, OAuth client files, tokens, PEM files, or `.streamlit/secrets.toml`.
+
+For deployed use, provide credentials through Streamlit Community Cloud secrets or environment-level secret management. The app supports:
 
 - `GOLF_WEEKEND_WORKBOOK_NAME`
 - `GOLF_WEEKEND_WORKBOOK_ID`
-- `GOLF_WEEKEND_SERVICE_ACCOUNT_FILE`
+- `GOLF_WEEKEND_SERVICE_ACCOUNT_FILE` pointing at a secret-managed file outside the repository
 
-Default local service account path:
+Legacy local development can still use this default path, but do not keep real credentials there inside a working repo:
 
 ```text
 secrets/google_service_account.json
@@ -146,5 +148,6 @@ The app will seed headers and default rows for `players`, `rounds`, and `setting
 - `Stroke Play` and `Skins` are UI labels; both use net better-ball team scoring.
 - `Skins` carries tied holes forward to the next outright winner.
 - If Google Sheets is unavailable, the UI remains usable in session fallback mode, but state is not shared across users.
+- Live scoring should be run against Google Sheets. Session fallback is visibly warned in the app and should not be treated as durable scoring storage.
 - The sidebar is the primary page navigation. In-body pages now focus on the current round action instead of repeating a full page-link grid.
 - `Setup / Admin` requires an explicit confirmation before the selected round can be reset.

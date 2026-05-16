@@ -4,7 +4,14 @@ from typing import Any
 
 import streamlit as st
 
-from components.layout import render_chip_row, render_connection_panel, render_metric_card, render_section_header, render_status_card
+from components.layout import (
+    render_chip_row,
+    render_connection_panel,
+    render_metric_card,
+    render_section_header,
+    render_session_fallback_warning,
+    render_status_card,
+)
 from components.score_tracker import render_player_handicap_editor, render_round_summary_metrics
 from domain.bonus_competitions import (
     BONUS_COMPETITIONS_SETTING_KEY,
@@ -166,6 +173,8 @@ def render_setup_admin(
         ],
         tone="accent",
     )
+    if persistence["mode"] != "sheets":
+        render_session_fallback_warning()
 
     setup_tab, bonus_tab, players_tab, connection_tab, admin_tab = st.tabs(
         ["Round Setup", "Bonus Points", "Players & Handicaps", "Connection", "Admin Actions"]
@@ -186,7 +195,7 @@ def render_setup_admin(
             st.info(
                 f"Shared mode is active. Share the workbook `{config.workbook_name}` with `{principal}` and the app can use Sheets without each player signing in."
                 if principal
-                else "Shared mode is active. Add service-account credentials in Streamlit secrets or as a local JSON file to enable shared Google Sheets access."
+                else "Shared mode is active. Add service-account credentials in Streamlit secrets or an environment-managed secret path outside the repo to enable shared Google Sheets access."
             )
         else:
             if not config.service_account_file.exists():

@@ -38,11 +38,11 @@ def compute_round_results(
     if format_name == "Singles":
         result = score_singles(course_df, score_df, player_rows, player_names, singles_matchups=singles_matchups)
     elif format_name == "4-Ball":
-        result = score_four_ball(course_df, score_df, player_rows, player_names)
+        result = score_four_ball(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
     elif format_name == "Stroke Play":
-        result = score_stroke_play(course_df, score_df, player_rows, player_names)
+        result = score_stroke_play(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
     elif format_name == "Skins":
-        result = score_skins(course_df, score_df, player_rows, player_names)
+        result = score_skins(course_df, score_df, player_rows, player_names, scoring_mode=scoring_mode)
     else:
         result = {
             "format_name": format_name,
@@ -102,7 +102,13 @@ def build_hole_shot_views(
         return groups
 
     handicap_lookup = {row["Player"]: int(row["Playing Handicap"]) for _, row in player_rows.iterrows()}
-    shot_info = build_shot_allocation_table(course_df[["hole", "si"]], handicap_lookup)
+    if scoring_mode == "gross":
+        handicap_lookup = {player: 0 for player in handicap_lookup}
+    shot_info = build_shot_allocation_table(
+        course_df[["hole", "si"]],
+        handicap_lookup,
+        relative_to_lowest=format_name == "4-Ball" and scoring_mode != "gross",
+    )
     hole_rows = shot_info["table"].groupby("hole").apply(
         lambda frame: {row["Player"]: int(row["shots_received"]) for _, row in frame.iterrows()}
     )
