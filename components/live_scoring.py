@@ -18,7 +18,14 @@ from domain.scoring import compute_round_results, get_hole_shots_for_display
 from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
-from support.state_helpers import build_score_rows_for_hole, save_result_payload, save_scores_for_hole, save_setting, verify_scores_for_hole
+from support.state_helpers import (
+    build_score_rows_for_hole,
+    persistence_snapshot,
+    save_result_payload,
+    save_scores_for_hole,
+    save_setting,
+    verify_scores_for_hole,
+)
 from domain.weekend_config import team_name
 from support.app_context import compact_team_label_text
 from support.navigation_state import set_active_hole_for_ui
@@ -258,7 +265,15 @@ def _persist_live_scores(
     hole: int,
     result_payload: dict[str, Any],
 ) -> None:
-    save_scores_for_hole(round_runtime, hole, updated_scores, round_state)
+    snapshot = persistence_snapshot(interactive=False)
+    save_scores_for_hole(
+        round_runtime,
+        hole,
+        updated_scores,
+        round_state,
+        snapshot=snapshot,
+        refresh=not bool(result_payload),
+    )
     verification = verify_scores_for_hole(
         round_runtime["round_id"],
         hole,
@@ -270,9 +285,11 @@ def _persist_live_scores(
             score_frame=updated_scores,
             round_state=round_state,
         ),
+        snapshot=snapshot,
+        force_fresh=snapshot["mode"] == "sheets",
     )
     if result_payload:
-        save_result_payload(round_runtime["round_id"], result_payload)
+        save_result_payload(round_runtime["round_id"], result_payload, snapshot=snapshot)
     verified_at = verification.verified_at.astimezone().strftime("%H:%M:%S") if verification.verified_at else datetime.now().strftime("%H:%M:%S")
     st.session_state["last_live_save_status"] = {
         "round_id": round_runtime["round_id"],

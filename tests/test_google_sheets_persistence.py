@@ -100,7 +100,7 @@ class GoogleSheetsPersistenceTests(unittest.TestCase):
         with (
             patch("support.google_sheets.load_results", fake_load_results),
             patch("support.google_sheets.get_worksheet", fake_get_worksheet),
-            patch("support.google_sheets.refresh_sheet_caches", lambda: None),
+            patch("support.google_sheets.refresh_sheet_caches", lambda **_kwargs: None),
         ):
             save_round_result("R1", {"format_name": "4-Ball", "payload": {"export_bytes": b"abc"}})
 

@@ -323,7 +323,14 @@ def build_round_state(
     }
 
 
-def save_scores_for_hole(round_runtime: dict[str, Any], hole: int, score_frame: pd.DataFrame, round_state: dict[str, Any]) -> None:
+def save_scores_for_hole(
+    round_runtime: dict[str, Any],
+    hole: int,
+    score_frame: pd.DataFrame,
+    round_state: dict[str, Any],
+    snapshot: dict[str, Any] | None = None,
+    refresh: bool = True,
+) -> None:
     rows = build_score_rows_for_hole(
         round_id=round_runtime["round_id"],
         hole=hole,
@@ -332,9 +339,9 @@ def save_scores_for_hole(round_runtime: dict[str, Any], hole: int, score_frame: 
         score_frame=score_frame,
         round_state=round_state,
     )
-    snapshot = persistence_snapshot(interactive=False)
+    snapshot = snapshot or persistence_snapshot(interactive=False)
     if snapshot["mode"] == "sheets":
-        google_sheets.save_hole_scores(round_runtime["round_id"], hole, rows)
+        google_sheets.save_hole_scores(round_runtime["round_id"], hole, rows, refresh=refresh)
     else:
         status = snapshot.get("status", {})
         if str(status.get("state", "")) in {"auth_required", "error"}:
@@ -357,8 +364,14 @@ def _normalise_status_value(value: object) -> str:
     return str(value or "").strip()
 
 
-def verify_scores_for_hole(round_id: str, hole: int, expected_rows: list[dict[str, Any]]) -> ScoreVerificationResult:
-    snapshot = persistence_snapshot(interactive=False)
+def verify_scores_for_hole(
+    round_id: str,
+    hole: int,
+    expected_rows: list[dict[str, Any]],
+    snapshot: dict[str, Any] | None = None,
+    force_fresh: bool = False,
+) -> ScoreVerificationResult:
+    snapshot = snapshot or persistence_snapshot(interactive=False)
     if snapshot["mode"] != "sheets":
         status = snapshot.get("status", {})
         if str(status.get("state", "")) in {"auth_required", "error"}:
@@ -367,7 +380,10 @@ def verify_scores_for_hole(round_id: str, hole: int, expected_rows: list[dict[st
             )
         return ScoreVerificationResult(round_id=round_id, holes=(int(hole),), expected_count=len(expected_rows), confirmed_count=len(expected_rows), verified_at=None)
 
-    loaded_rows = google_sheets.load_scores(round_id, version=str(snapshot.get("scores_version", "")))
+    if force_fresh:
+        loaded_rows = google_sheets.load_scores_fresh(round_id)
+    else:
+        loaded_rows = google_sheets.load_scores(round_id, version=str(snapshot.get("scores_version", "")))
     duplicate_count = len(duplicate_score_identities(loaded_rows))
     latest_rows = _latest_score_rows_by_identity(loaded_rows)
     loaded_by_player = {
@@ -453,11 +469,16 @@ def build_score_rows_for_hole(
     return rows
 
 
-def save_result_payload(round_id: str, result: dict[str, Any]) -> None:
+def save_result_payload(
+    round_id: str,
+    result: dict[str, Any],
+    snapshot: dict[str, Any] | None = None,
+    refresh: bool = True,
+) -> None:
     payload = summary_payload_for_storage(result)
-    snapshot = persistence_snapshot(interactive=False)
+    snapshot = snapshot or persistence_snapshot(interactive=False)
     if snapshot["mode"] == "sheets":
-        google_sheets.save_round_result(round_id, payload)
+        google_sheets.save_round_result(round_id, payload, refresh=refresh)
     else:
         save_local_result(round_id, payload)
 

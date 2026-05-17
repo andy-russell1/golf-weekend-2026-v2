@@ -47,18 +47,30 @@ class VerifiedSaveFlowTests(unittest.TestCase):
             ]
         )
 
-        def fake_save_scores(_runtime: dict[str, object], hole: int, _scores: pd.DataFrame, _state: dict[str, object]) -> None:
+        def fake_save_scores(
+            _runtime: dict[str, object],
+            hole: int,
+            _scores: pd.DataFrame,
+            _state: dict[str, object],
+            **_kwargs: object,
+        ) -> None:
             saved_calls.append(hole)
 
-        def fake_verify(_round_id: str, hole: int, expected_rows: list[dict[str, object]]) -> ScoreVerificationResult:
+        def fake_verify(
+            _round_id: str,
+            hole: int,
+            expected_rows: list[dict[str, object]],
+            **_kwargs: object,
+        ) -> ScoreVerificationResult:
             self.assertEqual(hole, 1)
             verified_payloads.append(expected_rows)
             return ScoreVerificationResult("R1", (1,), expected_count=4, confirmed_count=4, verified_at=None)
 
         with (
+            patch("components.live_scoring.persistence_snapshot", lambda interactive=False: {"mode": "sheets", "scores_version": "test"}),
             patch("components.live_scoring.save_scores_for_hole", fake_save_scores),
             patch("components.live_scoring.verify_scores_for_hole", fake_verify),
-            patch("components.live_scoring.save_result_payload", lambda _round_id, _payload: None),
+            patch("components.live_scoring.save_result_payload", lambda _round_id, _payload, **_kwargs: None),
         ):
             _persist_live_scores(_round_runtime(), updated_scores, _round_state(), 1, {"status_text": "ok"})
 

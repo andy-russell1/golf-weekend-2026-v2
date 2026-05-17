@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -593,16 +594,23 @@ def ensure_workbook_seeded(workbook: Any | None = None) -> None:
         raise SheetsWorkbookError(_api_error_message(exc)) from exc
 
 
-def refresh_sheet_caches(include_connection: bool = False) -> None:
+def refresh_sheet_caches(include_connection: bool = False, sheet_names: Iterable[str] | None = None) -> None:
     if include_connection:
         _cached_client.clear()
         _cached_workbook.clear()
-    load_players.clear()
-    load_rounds.clear()
-    _sheet_version.clear()
-    _load_all_scores.clear()
-    _load_all_results.clear()
-    load_settings.clear()
+    names = set(sheet_names or REQUIRED_HEADERS)
+    if "players" in names:
+        load_players.clear()
+    if "rounds" in names:
+        load_rounds.clear()
+    if names & {"scores", "results"}:
+        _sheet_version.clear()
+    if "scores" in names:
+        _load_all_scores.clear()
+    if "results" in names:
+        _load_all_results.clear()
+    if "settings" in names:
+        load_settings.clear()
 
 
 @st.cache_data(show_spinner=False, ttl=VOLATILE_SHEET_CACHE_TTL_SECONDS)
@@ -704,6 +712,13 @@ def load_scores(round_id: str | None = None, version: str | None = None) -> list
     return [row for row in rows if str(row.get("round_id", "")) == round_id]
 
 
+def load_scores_fresh(round_id: str | None = None) -> list[dict[str, Any]]:
+    rows = _load_records("scores")
+    if round_id is None:
+        return rows
+    return [row for row in rows if str(row.get("round_id", "")) == round_id]
+
+
 @st.cache_data(show_spinner=False, ttl=VOLATILE_SHEET_CACHE_TTL_SECONDS)
 def _load_all_results(version: str) -> list[dict[str, Any]]:
     return _load_records("results")
@@ -797,7 +812,7 @@ def save_players(rows: list[dict[str, Any]]) -> None:
         normalized["is_active"] = _normalize_bool_string(row.get("is_active", "TRUE"))
         normalized_rows.append(normalized)
     _replace_rows("players", PLAYERS_HEADERS, normalized_rows)
-    refresh_sheet_caches()
+    refresh_sheet_caches(sheet_names=("players",))
 
 
 def save_round(round_id: str, payload: dict[str, Any]) -> None:
@@ -816,7 +831,7 @@ def save_round(round_id: str, payload: dict[str, Any]) -> None:
     if not replaced:
         updated_rows.append(normalized_payload)
     _replace_rows("rounds", ROUNDS_HEADERS, updated_rows)
-    refresh_sheet_caches()
+    refresh_sheet_caches(sheet_names=("rounds",))
 
 
 def update_setting(key: str, value: str) -> None:
@@ -832,10 +847,10 @@ def update_setting(key: str, value: str) -> None:
     if not replaced:
         updated_rows.append({"key": key, "value": value})
     _replace_rows("settings", SETTINGS_HEADERS, updated_rows)
-    refresh_sheet_caches()
+    refresh_sheet_caches(sheet_names=("settings",))
 
 
-def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]]) -> None:
+def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]], refresh: bool = True) -> None:
     worksheet = get_worksheet("scores")
     try:
         existing_rows = worksheet.get_all_records(default_blank="")
@@ -853,7 +868,8 @@ def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]]) ->
             worksheet.append_rows(_records_to_sheet_values(SCORES_HEADERS, appended_rows)[1:])
     except Exception as exc:
         raise SheetsWriteError("Failed to save hole scores.") from exc
-    refresh_sheet_caches()
+    if refresh:
+        refresh_sheet_caches(sheet_names=("scores",))
 
 
 def _delete_rows_matching(worksheet_name: str, predicate: Any) -> None:
@@ -870,10 +886,10 @@ def clear_round_scores(round_id: str) -> None:
         _delete_rows_matching("results", lambda row: str(row.get("round_id", "")) == round_id)
     except Exception as exc:
         raise SheetsWriteError(f"Failed to clear round `{round_id}`.") from exc
-    refresh_sheet_caches()
+    refresh_sheet_caches(sheet_names=("scores", "results"))
 
 
-def save_round_result(round_id: str, result_payload: dict[str, object]) -> None:
+def save_round_result(round_id: str, result_payload: dict[str, object], refresh: bool = True) -> None:
     safe_payload = to_serializable(result_payload)
     serialized_payload = json.dumps(safe_payload)
     new_row = {
@@ -900,7 +916,8 @@ def save_round_result(round_id: str, result_payload: dict[str, object]) -> None:
             )
     except Exception as exc:
         raise SheetsWriteError("Failed to save round result.") from exc
-    refresh_sheet_caches()
+    if refresh:
+        refresh_sheet_caches(sheet_names=("results",))
 
 
 def load_result_payloads(version: str | None = None) -> dict[str, dict[str, Any]]:
