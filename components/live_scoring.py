@@ -17,6 +17,7 @@ from domain.formatting import format_hole_name, format_relative_to
 from domain.scoring import compute_round_results, get_hole_shots_for_display
 from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
+from support.score_status import derive_score_status
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
 from support.state_helpers import (
     build_score_rows_for_hole,
@@ -112,13 +113,7 @@ def _coerce_score(value: object) -> pd._libs.missing.NAType | int:
 
 
 def _status_for_values(values: list[object], required_count: int | None = None) -> str:
-    populated = [value for value in values if value not in (None, "", "—")]
-    if not populated:
-        return "Pending"
-    target = required_count if required_count is not None else len(values)
-    if len(populated) >= target:
-        return "Complete"
-    return "In Progress"
+    return derive_score_status(values, required_count=required_count)
 
 
 def _score_changed(saved_value: object, entered_value: object) -> bool:

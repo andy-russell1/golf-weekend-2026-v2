@@ -102,6 +102,23 @@ class StateHelperTests(unittest.TestCase):
         self.assertEqual(frame.iloc[0]["player_1"], 7)
         self.assertEqual(frame.iloc[0]["status"], "Complete")
 
+    def test_score_rows_derive_complete_status_from_all_player_scores(self) -> None:
+        rows = [
+            {
+                "round_id": "R1",
+                "hole": 1,
+                "player_id": player_id,
+                "gross_score": score,
+                "status": "In Progress",
+                "updated_at": "2026-05-16T10:01:00+00:00",
+            }
+            for player_id, score in [("adam", 4), ("vincent", 5), ("alex", 4), ("andy", 3)]
+        ]
+
+        frame = _score_rows_to_round_frame(rows, holes=[1], format_name="4-Ball", player_ids=["adam", "vincent", "alex", "andy"])
+
+        self.assertEqual(frame.iloc[0]["status"], "Complete")
+
     def test_score_rows_without_runtime_player_ids_stay_blank(self) -> None:
         rows = [
             {

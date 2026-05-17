@@ -10,6 +10,7 @@ from domain.formatting import format_handicap_index
 from domain.handicap import build_player_handicap_table
 from domain.scoring import compute_round_results
 from support.google_sheets import GoogleSheetsError
+from support.score_status import with_derived_score_status
 from support.session import get_format_config
 from support.state_helpers import build_score_rows_for_hole, save_players, save_result_payload, save_scores_for_hole, verify_scores_for_hole
 from domain.weekend_config import TEAM_CONFIG
@@ -188,13 +189,14 @@ def render_full_card_editor(
         "error",
     }
 
-    editor_df = round_state["scores"].copy()
+    score_columns = list(config["score_columns"])
+    editor_df = with_derived_score_status(round_state["scores"], score_columns)
     rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
 
     display_df = editor_df.rename(columns={"hole": "Hole", "status": "Status", **rename_map})
     column_config = {
         "Hole": st.column_config.NumberColumn("Hole", disabled=True, width="small"),
-        "Status": st.column_config.SelectboxColumn("Status", options=["Pending", "In Progress", "Complete"]),
+        "Status": st.column_config.TextColumn("Status", disabled=True),
     }
     for label in rename_map.values():
         column_config[label] = st.column_config.NumberColumn(label, min_value=1, max_value=20, step=1)
@@ -203,17 +205,16 @@ def render_full_card_editor(
         width="stretch",
         hide_index=True,
         num_rows="fixed",
-        disabled=["Hole"],
+        disabled=["Hole", "Status"],
         column_config=column_config,
         key=f"score_editor::{round_runtime['round_id']}::{format_name}",
     )
     persisted = edited.rename(columns={value: key for key, value in rename_map.items()}).rename(columns={"Hole": "hole", "Status": "status"})
-    score_columns = list(config["score_columns"])
     persisted = persisted[round_state["scores"].columns].copy()
     for column in score_columns:
         persisted[column] = pd.to_numeric(persisted[column], errors="coerce").astype("Int64")
-    persisted["status"] = persisted["status"].fillna("Pending").astype(str)
-    changed_holes = _changed_scorecard_holes(round_state["scores"], persisted, score_columns)
+    persisted = with_derived_score_status(persisted, score_columns)
+    changed_holes = _changed_scorecard_holes(editor_df, persisted, score_columns)
     invalid_complete_holes = _invalid_complete_holes(persisted, score_columns)
 
     if changed_holes:

@@ -36,6 +36,7 @@ from support.session import (
 from domain.handicap import normalize_handicap_allocation
 from domain.weekend_config import FIXTURES, TEAM_CONFIG, get_fixture
 from support.round_progress import build_round_progress
+from support.score_status import derive_score_status
 
 
 @dataclass(frozen=True)
@@ -241,14 +242,7 @@ def _latest_score_rows_by_identity(rows: list[dict[str, Any]]) -> list[dict[str,
 
 
 def _status_from_loaded_scores(values: list[object], statuses: list[object], required_count: int) -> str:
-    populated = [value for value in values if not pd.isna(value) and value not in (None, "")]
-    if not populated:
-        return "Pending"
-    if len(populated) >= required_count and all(str(status or "").strip() == "Complete" for status in statuses):
-        return "Complete"
-    if len(populated) >= required_count and not any(str(status or "").strip() for status in statuses):
-        return "Complete"
-    return "In Progress"
+    return derive_score_status(values, required_count=required_count)
 
 
 def _score_rows_to_round_frame(
