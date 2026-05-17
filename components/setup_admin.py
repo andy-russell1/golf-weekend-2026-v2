@@ -319,13 +319,13 @@ def render_setup_admin(
                 try:
                     if auth_mode == "oauth_desktop":
                         get_credentials(interactive=True)
-                    refresh_sheet_caches()
+                    refresh_sheet_caches(include_connection=True)
                     st.rerun()
                 except GoogleSheetsError as exc:
                     st.error(str(exc))
         with action_columns[1]:
             if st.button("Refresh Workbook", width="stretch"):
-                refresh_sheet_caches()
+                refresh_sheet_caches(include_connection=True)
                 st.rerun()
 
     with setup_tab:

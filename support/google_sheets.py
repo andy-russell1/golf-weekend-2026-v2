@@ -113,7 +113,7 @@ REQUIRED_HEADERS: dict[str, tuple[str, ...]] = {
     "results": RESULTS_HEADERS,
     "settings": SETTINGS_HEADERS,
 }
-VOLATILE_SHEET_CACHE_TTL_SECONDS = 5
+VOLATILE_SHEET_CACHE_TTL_SECONDS = int(os.getenv("GOLF_WEEKEND_VOLATILE_SHEET_CACHE_TTL_SECONDS", "300"))
 SERVICE_ACCOUNT_REQUIRED_FIELDS = (
     "type",
     "project_id",
@@ -478,7 +478,7 @@ def get_credentials(interactive: bool = False) -> Any:
     config = get_google_sheets_config()
     if interactive:
         creds = _build_credentials(config, interactive=True)
-        refresh_sheet_caches()
+        refresh_sheet_caches(include_connection=True)
         return creds
     return _build_credentials(config, interactive=False)
 
@@ -593,16 +593,19 @@ def ensure_workbook_seeded(workbook: Any | None = None) -> None:
         raise SheetsWorkbookError(_api_error_message(exc)) from exc
 
 
-def refresh_sheet_caches() -> None:
-    _cached_client.clear()
-    _cached_workbook.clear()
+def refresh_sheet_caches(include_connection: bool = False) -> None:
+    if include_connection:
+        _cached_client.clear()
+        _cached_workbook.clear()
     load_players.clear()
     load_rounds.clear()
+    _sheet_version.clear()
     _load_all_scores.clear()
     _load_all_results.clear()
     load_settings.clear()
 
 
+@st.cache_data(show_spinner=False, ttl=VOLATILE_SHEET_CACHE_TTL_SECONDS)
 def _sheet_version(sheet_name: str) -> str:
     headers = REQUIRED_HEADERS[sheet_name]
     updated_at_column = headers.index("updated_at") + 1
