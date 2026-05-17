@@ -5,7 +5,8 @@ import streamlit as st
 from components.hole_explorer import render_hole_explorer
 from components.layout import render_chip_row, render_section_header
 from components.overview import render_course_briefing, render_course_scorecard, render_playing_handicap_summary
-from support.app_context import build_page_context, initialize_page, render_shared_sidebar, set_active_hole_for_ui
+from support.app_context import build_page_context, initialize_page, render_shared_sidebar
+from support.navigation_state import set_active_hole_for_ui
 
 
 def _round_cursor_label(round_focus: dict[str, object]) -> str:

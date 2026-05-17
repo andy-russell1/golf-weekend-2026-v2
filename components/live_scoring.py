@@ -20,7 +20,8 @@ from support.google_sheets import GoogleSheetsError
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
 from support.state_helpers import build_score_rows_for_hole, save_result_payload, save_scores_for_hole, save_setting, verify_scores_for_hole
 from domain.weekend_config import team_name
-from support.app_context import compact_team_label_text, set_active_hole_for_ui
+from support.app_context import compact_team_label_text
+from support.navigation_state import set_active_hole_for_ui
 
 
 SCORE_OPTIONS = ["—", *list(range(1, 11))]

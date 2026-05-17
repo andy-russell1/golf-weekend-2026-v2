@@ -13,9 +13,9 @@ from support.app_context import (
     ensure_round_focus,
     initialize_page,
     render_shared_sidebar,
-    set_selected_fixture_for_ui,
     team_format_label,
 )
+from support.navigation_state import set_selected_fixture_for_ui
 
 
 def _render_round_switcher(current_fixture_id: str) -> None:
