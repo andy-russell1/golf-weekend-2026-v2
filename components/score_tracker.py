@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import pandas as pd
 import streamlit as st
 
@@ -9,8 +11,84 @@ from domain.handicap import build_player_handicap_table
 from domain.scoring import compute_round_results
 from support.google_sheets import GoogleSheetsError
 from support.session import get_format_config
-from support.state_helpers import save_players, save_result_payload, save_scores_for_hole
+from support.state_helpers import build_score_rows_for_hole, save_players, save_result_payload, save_scores_for_hole, verify_scores_for_hole
 from domain.weekend_config import TEAM_CONFIG
+
+
+def _player_id_validation_error(player_ids: list[str]) -> str:
+    normalized = [str(player_id or "").strip() for player_id in player_ids]
+    if any(not player_id for player_id in normalized):
+        return "Player setup is invalid: every active player needs a stable player ID before scorecard edits can be saved."
+    if len({player_id.casefold() for player_id in normalized}) != len(normalized):
+        return "Player setup is invalid: active player IDs must be unique before scorecard edits can be saved."
+    return ""
+
+
+def _changed_scorecard_holes(
+    before: pd.DataFrame,
+    after: pd.DataFrame,
+    score_columns: list[str],
+) -> list[int]:
+    columns = ["status", *score_columns]
+    before_indexed = before.set_index("hole")[columns].astype("string").fillna("")
+    after_indexed = after.set_index("hole")[columns].astype("string").fillna("")
+    changed: list[int] = []
+    for hole in after_indexed.index:
+        if hole not in before_indexed.index or not after_indexed.loc[hole].equals(before_indexed.loc[hole]):
+            changed.append(int(hole))
+    return changed
+
+
+def _invalid_complete_holes(scores: pd.DataFrame, score_columns: list[str]) -> list[int]:
+    invalid: list[int] = []
+    for _, row in scores.iterrows():
+        if str(row.get("status", "")).strip() != "Complete":
+            continue
+        if any(pd.isna(row.get(column)) for column in score_columns):
+            invalid.append(int(row["hole"]))
+    return invalid
+
+
+def _save_verified_scorecard_changes(
+    course_df: pd.DataFrame,
+    round_runtime: dict[str, object],
+    round_state: dict[str, object],
+    tee_rating: dict[str, object],
+    persisted: pd.DataFrame,
+    changed_holes: list[int],
+    singles_matchups: list[dict[str, object]] | None = None,
+) -> None:
+    format_name = str(round_runtime["format_name"])
+    for hole in changed_holes:
+        save_scores_for_hole(round_runtime, int(hole), persisted, round_state)
+        verify_scores_for_hole(
+            str(round_runtime["round_id"]),
+            int(hole),
+            build_score_rows_for_hole(
+                round_id=str(round_runtime["round_id"]),
+                hole=int(hole),
+                format_name=format_name,
+                scoring_mode=str(round_runtime["scoring_mode"]),
+                score_frame=persisted,
+                round_state=round_state,
+            ),
+        )
+    result = compute_round_results(
+        course_df=course_df,
+        format_name=format_name,
+        score_df=persisted,
+        player_names=list(round_state["player_names"]),
+        player_ids=list(round_state["player_ids"]),
+        handicap_indexes=list(round_state["handicap_indexes"]),
+        tee_rating=tee_rating,
+        allowance_percent=int(round_runtime["allowance_percent"]),
+        scramble_mode=str(round_runtime["scramble_mode"]),
+        scoring_mode=str(round_runtime["scoring_mode"]),
+        stableford_mode=str(round_runtime["stableford_mode"]),
+        handicap_allocation=str(round_runtime.get("handicap_allocation") or ""),
+        singles_matchups=singles_matchups,
+    )
+    save_result_payload(str(round_runtime["round_id"]), result)
 
 
 def render_player_handicap_editor(
@@ -97,10 +175,18 @@ def render_full_card_editor(
     round_state: dict[str, object],
     tee_rating: dict[str, object],
     singles_matchups: list[dict[str, object]] | None = None,
+    persistence: dict[str, object] | None = None,
 ) -> pd.DataFrame:
     format_name = str(round_runtime["format_name"])
     config = get_format_config(format_name)
     player_names = list(round_state["player_names"])
+    player_ids = list(round_state["player_ids"])
+    player_id_error = _player_id_validation_error(player_ids)
+    persistence_status = (persistence or {}).get("status", {}) if isinstance(persistence, dict) else {}
+    save_blocked = (persistence or {}).get("mode") != "sheets" and str(persistence_status.get("state", "")) in {
+        "auth_required",
+        "error",
+    }
 
     editor_df = round_state["scores"].copy()
     rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
@@ -127,27 +213,59 @@ def render_full_card_editor(
     for column in score_columns:
         persisted[column] = pd.to_numeric(persisted[column], errors="coerce").astype("Int64")
     persisted["status"] = persisted["status"].fillna("Pending").astype(str)
+    changed_holes = _changed_scorecard_holes(round_state["scores"], persisted, score_columns)
+    invalid_complete_holes = _invalid_complete_holes(persisted, score_columns)
 
-    if st.button("Save Full Scorecard", width="stretch"):
+    if changed_holes:
+        st.info(f"Unsaved scorecard edits on hole(s): {', '.join(str(hole) for hole in changed_holes)}.")
+    else:
+        st.caption("No unsaved scorecard edits.")
+    if player_id_error:
+        st.error(player_id_error)
+    duplicate_score_rows = list(round_state.get("duplicate_score_rows", []))
+    if duplicate_score_rows:
+        st.warning(
+            f"Duplicate Google Sheets score rows detected for this round ({len(duplicate_score_rows)} player/hole identities). "
+            "The latest updated_at row is shown here; older duplicate rows are left in the workbook for manual review."
+        )
+    if invalid_complete_holes:
+        st.error(f"Complete holes must have all player scores. Check hole(s): {', '.join(str(hole) for hole in invalid_complete_holes)}.")
+    if save_blocked:
+        st.error("Google Sheets is unavailable. Full scorecard edits cannot be saved until workbook access is restored.")
+
+    editor_actions = st.columns(2)
+    with editor_actions[0]:
+        save_clicked = st.button(
+            "Save Full Scorecard",
+            width="stretch",
+            type="primary",
+            disabled=save_blocked or bool(player_id_error) or bool(invalid_complete_holes) or not changed_holes,
+        )
+    with editor_actions[1]:
+        reset_clicked = st.button("Discard Table Edits", width="stretch", disabled=not changed_holes)
+
+    if reset_clicked:
+        st.session_state.pop(f"score_editor::{round_runtime['round_id']}::{format_name}", None)
+        st.rerun()
+
+    if save_clicked:
         try:
-            for hole in persisted["hole"].tolist():
-                save_scores_for_hole(round_runtime, int(hole), persisted, round_state)
-            result = compute_round_results(
-                course_df=course_df,
-                format_name=format_name,
-                score_df=persisted,
-                player_names=list(round_state["player_names"]),
-                player_ids=list(round_state["player_ids"]),
-                handicap_indexes=list(round_state["handicap_indexes"]),
-                tee_rating=tee_rating,
-                allowance_percent=int(round_runtime["allowance_percent"]),
-                scramble_mode=str(round_runtime["scramble_mode"]),
-                scoring_mode=str(round_runtime["scoring_mode"]),
-                stableford_mode=str(round_runtime["stableford_mode"]),
-                handicap_allocation=str(round_runtime.get("handicap_allocation") or ""),
-                singles_matchups=singles_matchups,
-            )
-            save_result_payload(str(round_runtime["round_id"]), result)
+            with st.spinner("Saving changed holes and verifying Google Sheets rows..."):
+                _save_verified_scorecard_changes(
+                    course_df=course_df,
+                    round_runtime=round_runtime,
+                    round_state=round_state,
+                    tee_rating=tee_rating,
+                    persisted=persisted,
+                    changed_holes=changed_holes,
+                    singles_matchups=singles_matchups,
+                )
+            st.session_state["last_live_save_status"] = {
+                "round_id": str(round_runtime["round_id"]),
+                "hole": ", ".join(str(hole) for hole in changed_holes),
+                "state": "verified",
+                "verified_at": datetime.now().strftime("%H:%M:%S"),
+            }
             st.rerun()
         except GoogleSheetsError as exc:
             st.error(str(exc))

@@ -49,6 +49,36 @@ class GoogleSheetsPersistenceTests(unittest.TestCase):
         self.assertEqual(second_append, [])
         self.assertEqual(len(second_update), 2)
 
+    def test_upsert_score_rows_updates_latest_duplicate_without_appending(self) -> None:
+        existing_rows = [
+            {
+                "round_id": "R1",
+                "hole": 1,
+                "player_id": "adam",
+                "gross_score": 4,
+                "status": "Complete",
+                "updated_at": "2026-05-16T10:01:00+00:00",
+            },
+            {
+                "round_id": "R1",
+                "hole": 1,
+                "player_id": "adam",
+                "gross_score": 5,
+                "status": "Complete",
+                "updated_at": "2026-05-16T10:02:00+00:00",
+            },
+        ]
+        replacement_rows = [{"player_id": "adam", "gross_score": 6, "status": "Complete"}]
+
+        updated_rows, appended_rows = _upsert_score_rows(existing_rows, "R1", 1, replacement_rows)
+        second_update, second_append = _upsert_score_rows(updated_rows + appended_rows, "R1", 1, replacement_rows)
+
+        self.assertEqual(appended_rows, [])
+        self.assertEqual(second_append, [])
+        self.assertEqual(len(second_update), 2)
+        self.assertEqual(updated_rows[0]["gross_score"], 4)
+        self.assertEqual(updated_rows[1]["gross_score"], 6)
+
     def test_save_round_result_strips_binary_payloads_before_json_storage(self) -> None:
         captured: dict[str, object] = {}
 

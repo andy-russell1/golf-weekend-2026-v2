@@ -724,8 +724,17 @@ def _replace_rows(worksheet_name: str, headers: tuple[str, ...], rows: list[dict
         raise SheetsWriteError(f"Failed to update worksheet `{worksheet_name}`.") from exc
 
 
-def _score_row_key(row: dict[str, Any]) -> tuple[str, int, str]:
-    return (str(row.get("round_id", "")), int(float(row.get("hole") or 0)), str(row.get("player_id", "")))
+def _score_hole_number(row: dict[str, Any]) -> int:
+    return int(float(row.get("hole") or row.get("hole_number") or 0))
+
+
+def score_row_identity(row: dict[str, Any]) -> tuple[str, int, str]:
+    """Canonical score identity: round/fixture, hole number, stable player ID."""
+    return (
+        str(row.get("round_id") or row.get("fixture_id") or "").strip(),
+        _score_hole_number(row),
+        str(row.get("player_id", "")).strip().casefold(),
+    )
 
 
 def _normalise_score_replacement(round_id: str, hole: int, row: dict[str, object]) -> dict[str, Any]:
@@ -747,21 +756,32 @@ def _upsert_score_rows(
     replacements: dict[tuple[str, int, str], dict[str, Any]] = {}
     for row in rows:
         replacement = _normalise_score_replacement(round_id, hole, row)
-        replacements[_score_row_key(replacement)] = replacement
+        replacements[score_row_identity(replacement)] = replacement
     updated_rows: list[dict[str, Any]] = []
     appended_rows: list[dict[str, Any]] = []
-    seen_keys: set[tuple[str, int, str]] = set()
+    target_indexes: dict[tuple[str, int, str], int] = {}
+    for index, existing in enumerate(existing_rows):
+        key = score_row_identity(existing)
+        if key not in replacements:
+            continue
+        current = target_indexes.get(key)
+        if current is None:
+            target_indexes[key] = index
+            continue
+        current_time = str(existing_rows[current].get("updated_at") or "")
+        candidate_time = str(existing.get("updated_at") or "")
+        if (candidate_time, index) >= (current_time, current):
+            target_indexes[key] = index
 
-    for existing in existing_rows:
-        key = _score_row_key(existing)
-        if key in replacements:
+    for index, existing in enumerate(existing_rows):
+        key = score_row_identity(existing)
+        if key in replacements and target_indexes.get(key) == index:
             updated_rows.append({**existing, **replacements[key]})
-            seen_keys.add(key)
         else:
             updated_rows.append(existing)
 
     for key, replacement in replacements.items():
-        if key not in seen_keys:
+        if key not in target_indexes:
             appended_rows.append(replacement)
 
     return updated_rows, appended_rows
@@ -817,15 +837,12 @@ def save_hole_scores(round_id: str, hole: int, rows: list[dict[str, object]]) ->
     try:
         existing_rows = worksheet.get_all_records(default_blank="")
         updated_rows, appended_rows = _upsert_score_rows(existing_rows, round_id, hole, rows)
-        existing_index = {_score_row_key(row): index + 2 for index, row in enumerate(existing_rows)}
-        original_by_key = {_score_row_key(row): row for row in existing_rows}
 
-        for row in updated_rows:
-            key = _score_row_key(row)
-            if key not in existing_index or row == original_by_key.get(key):
+        for index, row in enumerate(updated_rows):
+            if index >= len(existing_rows) or row == existing_rows[index]:
                 continue
             worksheet.update(
-                f"A{existing_index[key]}",
+                f"A{index + 2}",
                 _records_to_sheet_values(SCORES_HEADERS, [row])[1:],
             )
 

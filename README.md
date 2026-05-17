@@ -55,7 +55,7 @@ Confirm Google Sheets connection in `Setup / Admin` -> `Connection`. The connect
 
 Reset a round safely from `Setup / Admin` -> `Admin Actions`. Select the fixture in the sidebar first, tick the confirmation box, type `RESET`, then reset only that selected round.
 
-Score a hole on mobile from `Live Scoring`. The scoring cursor resumes from the saved `scores` rows, so a browser refresh after saving hole 1 should continue at hole 2. Use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`. Saved complete holes open in a protected viewing state; use `Edit saved hole` before updating workbook rows.
+Score a hole on mobile from `Live Scoring`. The scoring cursor resumes from the saved `scores` rows, so a browser refresh after saving hole 1 should continue at hole 2. Use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`. Saved complete holes open in a protected viewing state; use `Edit saved hole` before updating workbook rows. A score save is only treated as workbook-saved after the app writes the Google Sheets rows, reads them back, and verifies the expected `round_id`, hole, `player_id`, gross score, and status values.
 
 Singles pairings can be set from `Setup / Admin` -> `Round Setup` when `Singles` is selected. The pairings are saved in the existing `settings` tab under `singles_matchups_json`, so no extra worksheet or header is required.
 
@@ -151,5 +151,6 @@ The app will seed headers and default rows for `players`, `rounds`, and `setting
 - `Skins` carries tied holes forward to the next outright winner.
 - If Google Sheets is unavailable, the UI remains usable in session fallback mode, but state is not shared across users.
 - Live scoring should be run against Google Sheets. Session fallback is visibly warned in the app and should not be treated as durable scoring storage.
+- Score rows are keyed by `round_id`, hole, and `player_id`. If duplicate rows already exist in Google Sheets, the app reads the latest `updated_at` row and warns the user; it does not automatically delete older duplicate rows.
 - The sidebar is the primary page navigation. In-body pages now focus on the current round action instead of repeating a full page-link grid.
 - `Setup / Admin` requires an explicit confirmation before the selected round can be reset.

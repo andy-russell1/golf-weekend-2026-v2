@@ -59,6 +59,7 @@ def sync_fixture_from_url() -> None:
 
 def set_selected_fixture_for_ui(fixture_id: str) -> bool:
     set_selected_fixture_id(fixture_id)
+    st.query_params.pop(HOLE_QUERY_PARAM, None)
     return _update_query_param_if_changed(FIXTURE_QUERY_PARAM, fixture_id)
 
 
@@ -492,7 +493,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
         singles_matchups=weekend_state.get("singles_matchups", []),
     )
 
-    set_active_hole_for_ui(selected_fixture_id, int(round_state["active_hole"]), source="derived")
+    sync_active_hole_to_url(int(round_state["active_hole"]))
     saved_results = load_saved_results(snapshot=snapshot)
     round_focus_by_fixture = build_round_focus_by_fixture(store, results_by_fixture)
 

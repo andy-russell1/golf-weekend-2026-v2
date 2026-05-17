@@ -49,19 +49,44 @@ def _render_live_status(context: dict[str, object]) -> None:
         save_status = "No saved holes yet"
         save_detail = "Workbook has no scores for this round"
 
+    save_state = "Connected"
+    save_tone = "green" if persistence["mode"] == "sheets" else "gold"
     if isinstance(last_save, dict) and last_save.get("round_id") == context["selected_fixture"]["id"]:
-        browser_status = f"This browser saved hole {last_save.get('hole')} at {last_save.get('saved_at')}"
+        if last_save.get("state") == "verification_failed":
+            save_state = "Verification failed"
+            save_tone = "red"
+            browser_status = f"Hole {last_save.get('hole')} failed at {last_save.get('failed_at')}"
+        elif last_save.get("state") == "saving":
+            save_state = "Saving"
+            save_tone = "gold"
+            browser_status = f"Hole {last_save.get('hole')} is being saved"
+        else:
+            save_state = "Saved and verified"
+            save_tone = "green"
+            browser_status = f"This browser verified hole {last_save.get('hole')} at {last_save.get('verified_at') or last_save.get('saved_at')}"
     else:
         browser_status = "No save from this browser session"
 
-    columns = st.columns(2)
+    if persistence["mode"] != "sheets":
+        if str(status.get("state", "")) in {"auth_required", "error"}:
+            save_state = "Sheets unavailable"
+            save_tone = "red"
+        else:
+            save_state = "Session fallback"
+            save_tone = "gold"
+
+    columns = st.columns(3)
     with columns[0]:
         if persistence["mode"] == "sheets":
-            render_status_card("Connection", "Google Sheets", str(status.get("message", "Connected")), tone="green")
+            render_status_card("Connection", "Connected", str(status.get("message", "Google Sheets")), tone="green")
+        elif str(status.get("state", "")) in {"auth_required", "error"}:
+            render_status_card("Connection", "Sheets unavailable", "Live score saves are disabled until access is restored", tone="red")
         else:
             render_status_card("Connection", "Session fallback", "Scores are not shared or durable", tone="gold")
     with columns[1]:
-        render_status_card("Last saved to workbook", save_status, f"{save_detail} • {browser_status}")
+        render_status_card("Save State", save_state, browser_status, tone=save_tone)
+    with columns[2]:
+        render_status_card("Last verified save" if persistence["mode"] == "sheets" else "Last local save", save_status, save_detail)
 
 
 def _round_cursor_label(round_focus: dict[str, object]) -> str:
@@ -118,6 +143,7 @@ def main() -> None:
             shot_views=context["shot_views"],
             singles_matchups=context["singles_matchups"],
             bonus_competitions=context["bonus_competitions"],
+            persistence=context["persistence"],
         )
 
     with edit_tab:
@@ -131,6 +157,7 @@ def main() -> None:
             round_state=context["round_state"],
             tee_rating=context["tee_rating"],
             singles_matchups=context["singles_matchups"],
+            persistence=context["persistence"],
         )
         render_round_summary_metrics(format_name=context["format_name"], round_state=context["round_state"])
 

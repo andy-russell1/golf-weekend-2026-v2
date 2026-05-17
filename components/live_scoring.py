@@ -18,7 +18,7 @@ from domain.scoring import compute_round_results, get_hole_shots_for_display
 from support.data_loader import get_hole_record
 from support.google_sheets import GoogleSheetsError
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
-from support.state_helpers import save_result_payload, save_scores_for_hole, save_setting
+from support.state_helpers import build_score_rows_for_hole, save_result_payload, save_scores_for_hole, save_setting, verify_scores_for_hole
 from domain.weekend_config import team_name
 from support.app_context import compact_team_label_text, set_active_hole_for_ui
 
@@ -46,6 +46,19 @@ def _score_select_key(round_id: str, course: str, hole: int, player_id: str) -> 
     return f"{_score_widget_key(round_id, course, hole, player_id)}::select"
 
 
+def _score_draft_key(round_id: str, course: str, hole: int) -> str:
+    return f"live-score-draft::{round_id}::{course}::{hole}"
+
+
+def _player_id_validation_error(player_ids: list[str]) -> str:
+    normalized = [str(player_id or "").strip() for player_id in player_ids]
+    if any(not player_id for player_id in normalized):
+        return "Player setup is invalid: every active player needs a stable player ID before live scoring can be used."
+    if len({player_id.casefold() for player_id in normalized}) != len(normalized):
+        return "Player setup is invalid: active player IDs must be unique before live scoring can be used."
+    return ""
+
+
 def _normalise_score_for_widget(value: object) -> str | int:
     if value in (None, "", "—") or pd.isna(value):
         return "—"
@@ -68,10 +81,20 @@ def _increment_score(current: object, par: object, delta: int) -> int:
     return min(10, max(1, int(current) + delta))
 
 
-def _set_incremented_score(value_key: str, select_key: str, par: object, delta: int) -> None:
+def _set_incremented_score(
+    value_key: str,
+    select_key: str,
+    draft_key: str,
+    score_column: str,
+    par: object,
+    delta: int,
+) -> None:
     updated = _increment_score(st.session_state.get(value_key, "—"), par, delta)
     st.session_state[value_key] = updated
     st.session_state[select_key] = updated
+    draft = st.session_state.get(draft_key)
+    if isinstance(draft, dict):
+        draft[score_column] = updated
 
 
 def _coerce_score(value: object) -> pd._libs.missing.NAType | int:
@@ -100,7 +123,44 @@ def _score_changed(saved_value: object, entered_value: object) -> bool:
 def _clear_active_score_widget_values(round_runtime: dict[str, Any], course: str, hole: int, player_ids: list[str]) -> None:
     for player_id in player_ids:
         value_key = _score_value_key(round_runtime["round_id"], course, hole, player_id)
+        select_key = _score_select_key(round_runtime["round_id"], course, hole, player_id)
         st.session_state[value_key] = "—"
+        st.session_state[select_key] = "—"
+    st.session_state.pop(_score_draft_key(round_runtime["round_id"], course, hole), None)
+
+
+def _clear_score_draft(round_runtime: dict[str, Any], course: str, hole: int, player_ids: list[str]) -> None:
+    st.session_state.pop(_score_draft_key(round_runtime["round_id"], course, hole), None)
+    for player_id in player_ids:
+        st.session_state.pop(_score_value_key(round_runtime["round_id"], course, hole, player_id), None)
+        st.session_state.pop(_score_select_key(round_runtime["round_id"], course, hole, player_id), None)
+
+
+def _ensure_score_draft(
+    round_runtime: dict[str, Any],
+    course: str,
+    hole: int,
+    score_columns: list[str],
+    defaults: list[object],
+    player_ids: list[str],
+) -> dict[str, object]:
+    draft_key = _score_draft_key(round_runtime["round_id"], course, hole)
+    saved_signature = tuple(defaults)
+    player_signature = tuple(str(player_id or "").strip() for player_id in player_ids)
+    draft = st.session_state.get(draft_key)
+    if (
+        not isinstance(draft, dict)
+        or draft.get("__saved_signature") != saved_signature
+        or draft.get("__player_signature") != player_signature
+    ):
+        draft = {
+            "__saved_signature": saved_signature,
+            "__player_signature": player_signature,
+            "__force_widget_sync": True,
+            **{column: default for column, default in zip(score_columns, defaults)},
+        }
+        st.session_state[draft_key] = draft
+    return draft
 
 
 def _update_scores(
@@ -198,12 +258,39 @@ def _persist_live_scores(
     result_payload: dict[str, Any],
 ) -> None:
     save_scores_for_hole(round_runtime, hole, updated_scores, round_state)
+    verification = verify_scores_for_hole(
+        round_runtime["round_id"],
+        hole,
+        build_score_rows_for_hole(
+            round_id=round_runtime["round_id"],
+            hole=hole,
+            format_name=round_runtime["format_name"],
+            scoring_mode=round_runtime["scoring_mode"],
+            score_frame=updated_scores,
+            round_state=round_state,
+        ),
+    )
     if result_payload:
         save_result_payload(round_runtime["round_id"], result_payload)
+    verified_at = verification.verified_at.astimezone().strftime("%H:%M:%S") if verification.verified_at else datetime.now().strftime("%H:%M:%S")
     st.session_state["last_live_save_status"] = {
         "round_id": round_runtime["round_id"],
         "hole": hole,
-        "saved_at": datetime.now().strftime("%H:%M:%S"),
+        "state": "verified",
+        "verified_at": verified_at,
+        "confirmed_count": verification.confirmed_count,
+        "expected_count": verification.expected_count,
+        "duplicate_count": verification.duplicate_count,
+    }
+
+
+def _record_live_save_failure(round_id: str, hole: int, message: str) -> None:
+    st.session_state["last_live_save_status"] = {
+        "round_id": round_id,
+        "hole": hole,
+        "state": "verification_failed",
+        "failed_at": datetime.now().strftime("%H:%M:%S"),
+        "message": message,
     }
 
 
@@ -266,6 +353,7 @@ def render_live_scoring(
     shot_views: list[dict[str, Any]],
     singles_matchups: list[dict[str, Any]] | None = None,
     bonus_competitions: list[dict[str, Any]] | None = None,
+    persistence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     format_name = round_runtime["format_name"]
     allowance_percent = round_runtime["allowance_percent"]
@@ -276,6 +364,26 @@ def render_live_scoring(
     player_names = list(round_state["player_names"])
     handicap_indexes = list(round_state["handicap_indexes"])
     player_ids = list(round_state["player_ids"])
+    player_id_error = _player_id_validation_error(player_ids)
+    if player_id_error:
+        st.error(player_id_error)
+        return {"active_hole": int(round_state.get("active_hole", 1) or 1), "preview_result": {}}
+    duplicate_score_rows = list(round_state.get("duplicate_score_rows", []))
+    if duplicate_score_rows:
+        sample = ", ".join(
+            f"hole {item['hole']} / {item['player_id']}"
+            for item in duplicate_score_rows[:4]
+        )
+        suffix = "" if len(duplicate_score_rows) <= 4 else f" and {len(duplicate_score_rows) - 4} more"
+        st.warning(
+            f"Duplicate Google Sheets score rows were detected and the latest updated_at row is being used: {sample}{suffix}. "
+            "Saving again is safe and updates the canonical row, but older duplicate rows are left in the workbook for manual review."
+        )
+    persistence_status = (persistence or {}).get("status", {}) if isinstance(persistence, dict) else {}
+    save_blocked = (persistence or {}).get("mode") != "sheets" and str(persistence_status.get("state", "")) in {
+        "auth_required",
+        "error",
+    }
 
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     config = get_format_config(format_name)
@@ -363,6 +471,9 @@ def render_live_scoring(
     for column in score_columns:
         value = current_row[column]
         defaults.append("—" if pd.isna(value) else int(value))
+    score_draft = _ensure_score_draft(round_runtime, course, active_hole, score_columns, defaults, player_ids)
+    sync_widgets_from_draft = bool(score_draft.get("__force_widget_sync"))
+    draft_key = _score_draft_key(round_runtime["round_id"], course, active_hole)
     team_groups = (("red", TEAM_A_PLAYERS), ("blue", TEAM_B_PLAYERS))
     for team_id, player_indexes in team_groups:
         render_status_card(
@@ -379,10 +490,12 @@ def render_live_scoring(
             widget_key = _score_widget_key(round_runtime["round_id"], course, active_hole, player_id)
             value_key = _score_value_key(round_runtime["round_id"], course, active_hole, player_id)
             select_key = _score_select_key(round_runtime["round_id"], course, active_hole, player_id)
-            current_score = st.session_state.get(value_key, _normalise_score_for_widget(default))
+            current_score = _normalise_score_for_widget(score_draft.get(score_column, default))
             score_options = _score_options_for_widget(current_score)
-            if select_key not in st.session_state or st.session_state[select_key] not in score_options:
+            if sync_widgets_from_draft or select_key not in st.session_state or st.session_state[select_key] not in score_options:
                 st.session_state[select_key] = current_score if current_score in score_options else "—"
+            if sync_widgets_from_draft or value_key not in st.session_state:
+                st.session_state[value_key] = st.session_state[select_key]
             score_row = st.columns([1.25, 0.35, 0.85, 0.35], gap="small")
             with score_row[0]:
                 st.markdown(f"**{label}**")
@@ -395,7 +508,7 @@ def render_live_scoring(
                     disabled=action_mode == "protected_saved",
                     help=f"Decrease {label}'s gross score",
                     on_click=_set_incremented_score,
-                    args=(value_key, select_key, hole_par, -1),
+                    args=(value_key, select_key, draft_key, score_column, hole_par, -1),
                 )
             with score_row[2]:
                 index = score_options.index(st.session_state[select_key])
@@ -408,6 +521,7 @@ def render_live_scoring(
                     disabled=action_mode == "protected_saved",
                 )
                 st.session_state[value_key] = selected_score
+                score_draft[score_column] = selected_score
                 entry_values[score_column] = selected_score
             with score_row[3]:
                 st.button(
@@ -417,8 +531,9 @@ def render_live_scoring(
                     disabled=action_mode == "protected_saved",
                     help=f"Increase {label}'s gross score",
                     on_click=_set_incremented_score,
-                    args=(value_key, select_key, hole_par, 1),
+                    args=(value_key, select_key, draft_key, score_column, hole_par, 1),
                 )
+    score_draft["__force_widget_sync"] = False
 
     preview_scores = _update_scores(
         round_state["scores"],
@@ -453,23 +568,38 @@ def render_live_scoring(
 
     if protected_saved_hole:
         st.info("Saved scores are protected from accidental overwrite.")
+    elif save_blocked:
+        st.error("Google Sheets is unavailable. Fix the workbook connection before saving live scores.")
     elif not hole_is_complete:
         st.warning("Enter all required gross scores before using Save + Next. Use Save Hole if you intentionally need to keep this hole pending or in progress.")
 
     if action_mode == "edit_saved":
-        if st.button("Update Saved Hole", width="stretch", type="primary", disabled=not has_unsaved_changes):
-            updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
-            try:
-                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+        edit_actions = st.columns(2)
+        with edit_actions[0]:
+            if st.button("Update Saved Hole", width="stretch", type="primary", disabled=save_blocked or not has_unsaved_changes):
+                updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
+                try:
+                    with st.spinner("Saving and verifying Google Sheets rows..."):
+                        _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+                    st.session_state[edit_key] = False
+                    _clear_score_draft(round_runtime, course, active_hole, player_ids)
+                    set_active_hole_for_ui(round_runtime["round_id"], active_hole, source="manual")
+                    st.rerun()
+                except GoogleSheetsError as exc:
+                    _record_live_save_failure(round_runtime["round_id"], active_hole, str(exc))
+                    st.error(str(exc))
+        with edit_actions[1]:
+            if st.button("Cancel Edit", width="stretch"):
                 st.session_state[edit_key] = False
-                set_active_hole_for_ui(round_runtime["round_id"], resume_hole, source="derived")
+                _clear_score_draft(round_runtime, course, active_hole, player_ids)
+                set_active_hole_for_ui(round_runtime["round_id"], active_hole, source="manual")
                 st.rerun()
-            except GoogleSheetsError as exc:
-                st.error(str(exc))
-    elif st.button("Save + Next", width="stretch", type="primary", disabled=not hole_is_complete):
+    elif st.button("Save + Next", width="stretch", type="primary", disabled=save_blocked or not hole_is_complete):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
-            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            with st.spinner("Saving and verifying Google Sheets rows..."):
+                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            _clear_score_draft(round_runtime, course, active_hole, player_ids)
             set_active_hole_for_ui(
                 round_runtime["round_id"],
                 holes[min(len(holes) - 1, holes.index(active_hole) + 1)],
@@ -477,14 +607,18 @@ def render_live_scoring(
             )
             st.rerun()
         except GoogleSheetsError as exc:
+            _record_live_save_failure(round_runtime["round_id"], active_hole, str(exc))
             st.error(str(exc))
 
-    if action_mode == "normal" and st.button("Save Hole", width="stretch"):
+    if action_mode == "normal" and st.button("Save Hole", width="stretch", disabled=save_blocked):
         updated_scores = _update_scores(round_state["scores"], active_hole, format_name=format_name, values=entry_values)
         try:
-            _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            with st.spinner("Saving and verifying Google Sheets rows..."):
+                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, preview_result)
+            _clear_score_draft(round_runtime, course, active_hole, player_ids)
             st.rerun()
         except GoogleSheetsError as exc:
+            _record_live_save_failure(round_runtime["round_id"], active_hole, str(exc))
             st.error(str(exc))
 
     with st.expander("Clear this hole", expanded=False):
@@ -493,7 +627,7 @@ def render_live_scoring(
             f"I understand this will clear hole {active_hole}.",
             key=f"confirm-clear-hole::{round_runtime['round_id']}::{active_hole}",
         )
-        clear_disabled = not confirm_clear or (saved_hole_complete and not edit_saved_hole)
+        clear_disabled = save_blocked or not confirm_clear or (saved_hole_complete and not edit_saved_hole)
         if saved_hole_complete and not edit_saved_hole:
             st.caption("Enable Edit saved hole before clearing saved workbook rows.")
         if st.button("Clear Scores And Mark Pending", width="stretch", disabled=clear_disabled):
@@ -524,10 +658,12 @@ def render_live_scoring(
                     if tee_rating
                     else {}
                 )
-                _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, cleared_result)
+                with st.spinner("Saving and verifying Google Sheets rows..."):
+                    _persist_live_scores(round_runtime, updated_scores, round_state, active_hole, cleared_result)
                 _clear_active_score_widget_values(round_runtime, course, active_hole, player_ids)
                 st.rerun()
             except GoogleSheetsError as exc:
+                _record_live_save_failure(round_runtime["round_id"], active_hole, str(exc))
                 st.error(str(exc))
 
     if has_unsaved_changes and preview_cards:

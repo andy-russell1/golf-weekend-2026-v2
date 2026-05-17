@@ -192,7 +192,7 @@ def render_connection_panel(status: dict[str, Any], compact: bool = False) -> No
 
 def render_session_fallback_warning() -> None:
     st.warning(
-        "Google Sheets is not connected. Scores are being kept only in this Streamlit session and may not persist across users, devices, browser refreshes, or app restarts.",
+        "Google Sheets is not connected. Live score saves are disabled until workbook access is restored.",
     )
 
 
