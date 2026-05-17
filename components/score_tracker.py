@@ -193,10 +193,9 @@ def render_full_card_editor(
     editor_df = with_derived_score_status(round_state["scores"], score_columns)
     rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
 
-    display_df = editor_df.rename(columns={"hole": "Hole", "status": "Status", **rename_map})
+    display_df = editor_df.drop(columns=["status"]).rename(columns={"hole": "Hole", **rename_map})
     column_config = {
         "Hole": st.column_config.NumberColumn("Hole", disabled=True, width="small"),
-        "Status": st.column_config.TextColumn("Status", disabled=True),
     }
     for label in rename_map.values():
         column_config[label] = st.column_config.NumberColumn(label, min_value=1, max_value=20, step=1)
@@ -205,11 +204,12 @@ def render_full_card_editor(
         width="stretch",
         hide_index=True,
         num_rows="fixed",
-        disabled=["Hole", "Status"],
+        disabled=["Hole"],
         column_config=column_config,
         key=f"score_editor::{round_runtime['round_id']}::{format_name}",
     )
-    persisted = edited.rename(columns={value: key for key, value in rename_map.items()}).rename(columns={"Hole": "hole", "Status": "status"})
+    persisted = edited.rename(columns={value: key for key, value in rename_map.items()}).rename(columns={"Hole": "hole"})
+    persisted["status"] = "Pending"
     persisted = persisted[round_state["scores"].columns].copy()
     for column in score_columns:
         persisted[column] = pd.to_numeric(persisted[column], errors="coerce").astype("Int64")
