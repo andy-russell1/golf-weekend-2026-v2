@@ -876,8 +876,23 @@ def _delete_rows_matching(worksheet_name: str, predicate: Any) -> None:
     worksheet = get_worksheet(worksheet_name)
     rows = worksheet.get_all_records(default_blank="")
     row_numbers = [index + 2 for index, row in enumerate(rows) if predicate(row)]
-    for row_number in sorted(row_numbers, reverse=True):
-        worksheet.delete_rows(row_number)
+    if not row_numbers:
+        return
+
+    ranges: list[tuple[int, int]] = []
+    range_start = row_numbers[0]
+    previous_row = row_numbers[0]
+    for row_number in row_numbers[1:]:
+        if row_number == previous_row + 1:
+            previous_row = row_number
+            continue
+        ranges.append((range_start, previous_row))
+        range_start = row_number
+        previous_row = row_number
+    ranges.append((range_start, previous_row))
+
+    for start_row, end_row in sorted(ranges, reverse=True):
+        worksheet.delete_rows(start_row, end_row)
 
 
 def clear_round_scores(round_id: str) -> None:

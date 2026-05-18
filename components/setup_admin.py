@@ -476,5 +476,13 @@ def render_setup_admin(
             width="stretch",
             disabled=not (confirm_reset and confirmation_text.strip().upper() == "RESET"),
         ):
-            clear_round(fixture_id)
-            st.rerun()
+            try:
+                clear_round(fixture_id)
+            except GoogleSheetsError as exc:
+                st.error(
+                    "Round reset could not complete because Google Sheets rejected the write. "
+                    "Wait a minute, then try again."
+                )
+                st.caption(str(exc))
+            else:
+                st.rerun()

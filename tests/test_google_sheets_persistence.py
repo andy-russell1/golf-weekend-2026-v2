@@ -108,26 +108,28 @@ class GoogleSheetsPersistenceTests(unittest.TestCase):
         json.dumps(json.loads(payload_json))
         self.assertNotIn("export_bytes", payload_json)
 
-    def test_delete_rows_matching_deletes_from_bottom_up(self) -> None:
-        deleted_rows: list[int] = []
+    def test_delete_rows_matching_deletes_contiguous_ranges_from_bottom_up(self) -> None:
+        deleted_ranges: list[tuple[int, int]] = []
 
         class FakeWorksheet:
             def get_all_records(self, default_blank: str = "") -> list[dict[str, object]]:
                 return [
                     {"round_id": "R1"},
+                    {"round_id": "R1"},
                     {"round_id": "R2"},
+                    {"round_id": "R1"},
                     {"round_id": "R1"},
                 ]
 
-            def delete_rows(self, row_number: int) -> None:
-                deleted_rows.append(row_number)
+            def delete_rows(self, start_row: int, end_row: int | None = None) -> None:
+                deleted_ranges.append((start_row, end_row or start_row))
 
         from unittest.mock import patch
 
         with patch("support.google_sheets.get_worksheet", lambda _name: FakeWorksheet()):
             _delete_rows_matching("scores", lambda row: row.get("round_id") == "R1")
 
-        self.assertEqual(deleted_rows, [4, 2])
+        self.assertEqual(deleted_ranges, [(5, 6), (2, 3)])
 
 
 if __name__ == "__main__":
