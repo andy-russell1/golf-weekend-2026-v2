@@ -148,6 +148,40 @@ def update_bonus_winner(
     return updated
 
 
+def bonus_competition_summaries(competitions: list[dict[str, Any]], players_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    player_lookup = {
+        str(row.get("player_id", "")): {
+            "name": str(row.get("player_name") or row.get("name") or row.get("player_id") or ""),
+            "team_id": str(row.get("team_id") or row.get("team") or ""),
+            "team_name": str(row.get("team_name") or ""),
+        }
+        for row in players_rows
+    }
+    summaries: list[dict[str, Any]] = []
+    for competition in normalize_bonus_competitions(competitions):
+        if not competition.get("enabled"):
+            continue
+        winner_player_id = str(competition.get("winner_player_id") or "")
+        winner = player_lookup.get(winner_player_id, {})
+        winner_team_id = str(winner.get("team_id") or "")
+        summaries.append(
+            {
+                "id": str(competition.get("id") or ""),
+                "label": str(competition.get("label") or "Bonus Point"),
+                "round_id": str(competition.get("round_id") or ""),
+                "course": str(competition.get("course") or ""),
+                "hole": int(competition.get("hole") or 0),
+                "point_value": float(competition.get("point_value") or 0.0),
+                "winner_player_id": winner_player_id,
+                "winner_player_name": str(winner.get("name") or winner_player_id),
+                "winner_team_id": winner_team_id,
+                "winner_team_name": str(winner.get("team_name") or winner_team_id),
+                "awarded": bool(winner_player_id and winner_team_id),
+            }
+        )
+    return summaries
+
+
 def configured_bonus_competition(
     competition: dict[str, Any],
     *,

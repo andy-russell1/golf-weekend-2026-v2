@@ -61,7 +61,7 @@ Live scoring is the quota-sensitive path. The app keeps stable workbook tabs cac
 
 Singles pairings can be set from `Setup / Admin` -> `Round Setup` when `Singles` is selected. The pairings are saved in the existing `settings` tab under `singles_matchups_json`, so no extra worksheet or header is required.
 
-Weekend bonus competitions can be configured from `Setup / Admin` -> `Bonus Points`. The defaults are Longest Drive on Rolls of Monmouth hole 12 and Closest to the Pin on Clyne hole 8. Winners are captured in `Live Scoring` only when the active hole matches the configured bonus hole, and the points are saved in `settings` under `bonus_competitions_json`.
+Weekend bonus competitions can be configured from `Setup / Admin` -> `Bonus Points`. The defaults are Longest Drive on Rolls of Monmouth hole 12 and Closest to the Pin on Clyne hole 8. Winners are captured in `Live Scoring` only when the active hole matches the configured bonus hole, and the points are saved in `settings` under `bonus_competitions_json`. Enabled bonus competitions appear on the `Weekend Hub` as awarded winner cards or pending point cards, while the actual weekend totals continue to come from the central bonus point rows.
 
 ## Product flow
 

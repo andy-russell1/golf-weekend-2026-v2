@@ -12,6 +12,7 @@ from components.layout import (
     render_section_header,
     render_status_card,
 )
+from domain.bonus_competitions import bonus_competition_summaries
 from domain.formatting import format_handicap_index, format_points
 from domain.weekend_config import FIXTURES, TEAM_CONFIG, team_short_name
 
@@ -30,6 +31,42 @@ def _next_fixture(fixture_id: str) -> dict[str, Any] | None:
     return FIXTURES[next_index]
 
 
+def _fixture_title(fixture_id: str) -> str:
+    for fixture in FIXTURES:
+        if fixture["id"] == fixture_id:
+            return str(fixture["title"])
+    return str(fixture_id).replace("_", " ").title()
+
+
+def _point_label(point_value: float) -> str:
+    label = format_points(point_value)
+    return f"{label} point" if point_value == 1 else f"{label} points"
+
+
+def _render_bonus_points(bonus_competitions: list[dict[str, Any]], players_rows: list[dict[str, Any]]) -> None:
+    summaries = bonus_competition_summaries(bonus_competitions, players_rows)
+    if not summaries:
+        return
+
+    st.markdown("#### Bonus Points")
+    columns = st.columns(min(2, len(summaries)))
+    for index, summary in enumerate(summaries):
+        fixture_title = _fixture_title(str(summary["round_id"]))
+        hole_label = f"{fixture_title}, hole {summary['hole']}"
+        point_value = float(summary["point_value"])
+        if summary["awarded"]:
+            team_id = str(summary["winner_team_id"])
+            team_label = team_short_name(team_id) if team_id in TEAM_CONFIG else str(summary["winner_team_name"] or "Team")
+            status = str(summary["winner_player_name"])
+            supporting = f"{team_label} +{format_points(point_value)} - {hole_label}"
+        else:
+            status = "Pending"
+            supporting = f"{_point_label(point_value)} available - {hole_label}"
+
+        with columns[index % len(columns)]:
+            render_status_card(str(summary["label"]), status, supporting, tone="gold")
+
+
 def render_weekend_hub(
     selected_fixture: dict[str, Any],
     player_names: list[str],
@@ -40,6 +77,8 @@ def render_weekend_hub(
     round_focus: dict[str, Any],
     round_focus_by_fixture: dict[str, dict[str, Any]] | None,
     weekend_race: dict[str, Any],
+    bonus_competitions: list[dict[str, Any]] | None = None,
+    players_rows: list[dict[str, Any]] | None = None,
     show_header: bool = True,
 ) -> None:
     if show_header:
@@ -94,6 +133,8 @@ def render_weekend_hub(
         render_metric_card("Remaining", format_points(weekend_race["remaining_points"]), "points available")
     with points_row_two[1]:
         render_metric_card("Winning Mark", format_points(weekend_race["winning_target"]), "points to win")
+
+    _render_bonus_points(bonus_competitions or [], players_rows or [])
 
     with st.expander("Teams", expanded=False):
         team_columns = st.columns(2)

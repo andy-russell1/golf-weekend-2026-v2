@@ -32,6 +32,8 @@ def main() -> None:
         round_focus=context["round_focus"],
         round_focus_by_fixture=context["round_focus_by_fixture"],
         weekend_race=context["weekend_race"],
+        bonus_competitions=context["bonus_competitions"],
+        players_rows=context["store"]["players_rows"],
         show_header=False,
     )
 

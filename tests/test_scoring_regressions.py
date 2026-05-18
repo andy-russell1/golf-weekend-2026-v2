@@ -4,6 +4,7 @@ import json
 import unittest
 
 from domain.bonus_competitions import (
+    bonus_competition_summaries,
     bonus_competitions_from_json,
     bonus_competitions_to_json,
     bonus_point_rows,
@@ -402,6 +403,21 @@ class ScoringRegressionTests(unittest.TestCase):
         self.assertEqual(float(weekend_race["points_table"].iloc[-1]["Points Available"]), 7.0)
         self.assertEqual(weekend_race["red_points"], 1.0)
         self.assertEqual(weekend_race["remaining_points"], 6.0)
+
+    def test_bonus_competition_summaries_include_winner_and_pending_state(self) -> None:
+        competitions = update_bonus_winner(default_bonus_competitions(), "longest_drive", "adam")
+        players_rows = [
+            {"player_id": "adam", "player_name": "Adam", "team_id": "red", "team_name": "Team Kelly"},
+            {"player_id": "alex", "player_name": "Alex", "team_id": "blue", "team_name": "Team Russell"},
+        ]
+
+        summaries = bonus_competition_summaries(competitions, players_rows)
+
+        self.assertEqual(len(summaries), 2)
+        self.assertTrue(summaries[0]["awarded"])
+        self.assertEqual(summaries[0]["winner_player_name"], "Adam")
+        self.assertEqual(summaries[0]["winner_team_id"], "red")
+        self.assertFalse(summaries[1]["awarded"])
 
     def test_bonus_hole_filters_match_competition_type(self) -> None:
         clyne = load_course_data("clyne")
