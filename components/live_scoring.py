@@ -436,7 +436,7 @@ def render_live_scoring(
             set_active_hole_for_ui(round_runtime["round_id"], int(selected_hole), source="manual")
             active_hole = int(selected_hole)
     with selector_columns[1]:
-        render_metric_card("Hole", active_hole, "active")
+        render_metric_card("Hole", active_hole)
 
     hole_record = get_hole_record(course, active_hole)
     hole_name = format_hole_name(hole_record.get("hole_name"), active_hole)

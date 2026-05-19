@@ -240,6 +240,66 @@ def _render_scorecard_exports(
     st.info("The lower scorecard uses net team scoring where the selected format is net-based. It does not recalculate rules inside the PDF layer.")
 
 
+def _render_selected_round_save_status(
+    selected_fixture: dict[str, Any],
+    persistence: dict[str, Any],
+    round_state: dict[str, Any],
+) -> None:
+    status = persistence["status"]
+    progress = round_state.get("progress", {})
+    last_save = st.session_state.get("last_live_save_status", {})
+    latest_saved_hole = progress.get("latest_saved_hole")
+    latest_saved_at = progress.get("latest_saved_at")
+
+    if latest_saved_hole and latest_saved_at:
+        save_status = f"Hole {latest_saved_hole} at {latest_saved_at.astimezone().strftime('%H:%M')}"
+        save_detail = "Saved to workbook"
+    elif int(progress.get("completed_count", 0) or 0) > 0:
+        save_status = f"Hole {progress.get('last_completed_hole', 'saved')}"
+        save_detail = "Saved to workbook"
+    else:
+        save_status = "No saved holes yet"
+        save_detail = "Workbook has no scores for this round"
+
+    save_state = "Connected"
+    save_tone = "green" if persistence["mode"] == "sheets" else "gold"
+    browser_status = "No save from this browser session"
+    if isinstance(last_save, dict) and last_save.get("round_id") == selected_fixture["id"]:
+        if last_save.get("state") == "verification_failed":
+            save_state = "Verification failed"
+            save_tone = "red"
+            browser_status = f"Hole {last_save.get('hole')} failed at {last_save.get('failed_at')}"
+        elif last_save.get("state") == "saving":
+            save_state = "Saving"
+            save_tone = "gold"
+            browser_status = f"Hole {last_save.get('hole')} is being saved"
+        else:
+            save_state = "Saved and verified"
+            save_tone = "green"
+            browser_status = f"This browser verified hole {last_save.get('hole')} at {last_save.get('verified_at') or last_save.get('saved_at')}"
+
+    if persistence["mode"] != "sheets":
+        if str(status.get("state", "")) in {"auth_required", "error"}:
+            save_state = "Sheets unavailable"
+            save_tone = "red"
+        else:
+            save_state = "Session fallback"
+            save_tone = "gold"
+
+    columns = st.columns(3)
+    with columns[0]:
+        if persistence["mode"] == "sheets":
+            render_status_card("Connection", "Connected", str(status.get("message", "Google Sheets")), tone="green")
+        elif str(status.get("state", "")) in {"auth_required", "error"}:
+            render_status_card("Connection", "Sheets unavailable", "Live score saves are disabled until access is restored", tone="red")
+        else:
+            render_status_card("Connection", "Session fallback", "Scores are not shared or durable", tone="gold")
+    with columns[1]:
+        render_status_card("Save State", save_state, browser_status, tone=save_tone)
+    with columns[2]:
+        render_status_card("Last verified save" if persistence["mode"] == "sheets" else "Last local save", save_status, save_detail)
+
+
 def render_setup_admin(
     selected_fixture: dict[str, Any],
     persistence: dict[str, Any],
@@ -285,6 +345,7 @@ def render_setup_admin(
 
     with connection_tab:
         render_connection_panel(persistence["status"], compact=False)
+        _render_selected_round_save_status(selected_fixture, persistence, round_state)
         config = get_google_sheets_config()
         auth_mode = persistence["status"].get("auth_mode")
         if auth_mode == "adc":

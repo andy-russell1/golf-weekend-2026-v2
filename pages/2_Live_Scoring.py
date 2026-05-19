@@ -3,7 +3,6 @@ from __future__ import annotations
 import streamlit as st
 
 from components.layout import render_chip_row, render_section_header, render_session_fallback_warning
-from components.layout import render_status_card
 from components.live_scoring import render_live_scoring
 from components.score_tracker import render_full_card_editor, render_round_summary_metrics
 from domain.weekend_config import FIXTURES, format_fixture_label
@@ -32,63 +31,6 @@ def _render_round_switcher(current_fixture_id: str) -> None:
         st.rerun()
 
 
-def _render_live_status(context: dict[str, object]) -> None:
-    persistence = context["persistence"]
-    status = persistence["status"]
-    round_focus = context["round_focus"]
-    last_save = st.session_state.get("last_live_save_status", {})
-    latest_saved_hole = round_focus.get("latest_saved_hole")
-    latest_saved_at = round_focus.get("latest_saved_at")
-    if latest_saved_hole and latest_saved_at:
-        save_status = f"Hole {latest_saved_hole} at {latest_saved_at.astimezone().strftime('%H:%M')}"
-        save_detail = "Saved to workbook"
-    elif int(round_focus.get("completed_holes", 0) or 0) > 0:
-        save_status = f"Hole {round_focus.get('last_completed_hole', 'saved')}"
-        save_detail = "Saved to workbook"
-    else:
-        save_status = "No saved holes yet"
-        save_detail = "Workbook has no scores for this round"
-
-    save_state = "Connected"
-    save_tone = "green" if persistence["mode"] == "sheets" else "gold"
-    if isinstance(last_save, dict) and last_save.get("round_id") == context["selected_fixture"]["id"]:
-        if last_save.get("state") == "verification_failed":
-            save_state = "Verification failed"
-            save_tone = "red"
-            browser_status = f"Hole {last_save.get('hole')} failed at {last_save.get('failed_at')}"
-        elif last_save.get("state") == "saving":
-            save_state = "Saving"
-            save_tone = "gold"
-            browser_status = f"Hole {last_save.get('hole')} is being saved"
-        else:
-            save_state = "Saved and verified"
-            save_tone = "green"
-            browser_status = f"This browser verified hole {last_save.get('hole')} at {last_save.get('verified_at') or last_save.get('saved_at')}"
-    else:
-        browser_status = "No save from this browser session"
-
-    if persistence["mode"] != "sheets":
-        if str(status.get("state", "")) in {"auth_required", "error"}:
-            save_state = "Sheets unavailable"
-            save_tone = "red"
-        else:
-            save_state = "Session fallback"
-            save_tone = "gold"
-
-    columns = st.columns(3)
-    with columns[0]:
-        if persistence["mode"] == "sheets":
-            render_status_card("Connection", "Connected", str(status.get("message", "Google Sheets")), tone="green")
-        elif str(status.get("state", "")) in {"auth_required", "error"}:
-            render_status_card("Connection", "Sheets unavailable", "Live score saves are disabled until access is restored", tone="red")
-        else:
-            render_status_card("Connection", "Session fallback", "Scores are not shared or durable", tone="gold")
-    with columns[1]:
-        render_status_card("Save State", save_state, browser_status, tone=save_tone)
-    with columns[2]:
-        render_status_card("Last verified save" if persistence["mode"] == "sheets" else "Last local save", save_status, save_detail)
-
-
 def _round_cursor_label(round_focus: dict[str, object]) -> str:
     if round_focus.get("round_complete"):
         return "Round complete"
@@ -107,7 +49,6 @@ def main() -> None:
     if context["persistence"]["mode"] != "sheets":
         render_session_fallback_warning()
     _render_round_switcher(context["selected_fixture"]["id"])
-    _render_live_status(context)
     render_section_header(
         "Live Scoring",
         "Quick one-hole entry comes first here. Use the full card editor only when you need to fix an earlier hole.",
