@@ -50,6 +50,21 @@ def _invalid_complete_holes(scores: pd.DataFrame, score_columns: list[str]) -> l
     return invalid
 
 
+def _scorecard_editor_display_frame(
+    scores: pd.DataFrame,
+    course_df: pd.DataFrame,
+    rename_map: dict[str, str],
+) -> pd.DataFrame:
+    display_df = scores.drop(columns=["status"], errors="ignore").copy()
+    if "hole" in display_df.columns:
+        par_lookup = pd.Series(dtype="Int64")
+        if {"hole", "par"}.issubset(course_df.columns):
+            par_lookup = pd.to_numeric(course_df["par"], errors="coerce").astype("Int64")
+            par_lookup.index = pd.to_numeric(course_df["hole"], errors="coerce").astype("Int64")
+        display_df.insert(1, "par", pd.to_numeric(display_df["hole"], errors="coerce").astype("Int64").map(par_lookup))
+    return display_df.rename(columns={"hole": "Hole", "par": "Par", **rename_map})
+
+
 def _save_verified_scorecard_changes(
     course_df: pd.DataFrame,
     round_runtime: dict[str, object],
@@ -193,9 +208,10 @@ def render_full_card_editor(
     editor_df = with_derived_score_status(round_state["scores"], score_columns)
     rename_map = {f"player_{index + 1}": player_names[index] for index in range(config["active_player_count"])}
 
-    display_df = editor_df.drop(columns=["status"]).rename(columns={"hole": "Hole", **rename_map})
+    display_df = _scorecard_editor_display_frame(editor_df, course_df, rename_map)
     column_config = {
         "Hole": st.column_config.NumberColumn("Hole", disabled=True, width="small"),
+        "Par": st.column_config.NumberColumn("Par", disabled=True, width="small"),
     }
     for label in rename_map.values():
         column_config[label] = st.column_config.NumberColumn(label, min_value=1, max_value=20, step=1)
@@ -204,7 +220,7 @@ def render_full_card_editor(
         width="stretch",
         hide_index=True,
         num_rows="fixed",
-        disabled=["Hole"],
+        disabled=["Hole", "Par"],
         column_config=column_config,
         key=f"score_editor::{round_runtime['round_id']}::{format_name}",
     )

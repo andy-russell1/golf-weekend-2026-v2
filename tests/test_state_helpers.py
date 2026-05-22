@@ -5,7 +5,7 @@ import unittest
 import pandas as pd
 
 from components.live_scoring import _player_id_validation_error as live_player_id_validation_error
-from components.score_tracker import _changed_scorecard_holes, _invalid_complete_holes
+from components.score_tracker import _changed_scorecard_holes, _invalid_complete_holes, _scorecard_editor_display_frame
 from support.google_sheets import GoogleSheetsError
 from support.state_helpers import _score_rows_to_round_frame, duplicate_score_identities, verify_scores_for_hole
 
@@ -151,6 +151,20 @@ class StateHelperTests(unittest.TestCase):
         )
 
         self.assertEqual(_changed_scorecard_holes(before, after, ["player_1", "player_2"]), [1])
+
+    def test_scorecard_editor_display_frame_includes_read_only_par_column(self) -> None:
+        scores = pd.DataFrame(
+            [
+                {"hole": 1, "status": "Complete", "player_1": 4, "player_2": 5},
+                {"hole": 2, "status": "Pending", "player_1": pd.NA, "player_2": pd.NA},
+            ]
+        )
+        course_df = pd.DataFrame([{"hole": 1, "par": 4}, {"hole": 2, "par": 3}])
+
+        display = _scorecard_editor_display_frame(scores, course_df, {"player_1": "Adam", "player_2": "Vincent"})
+
+        self.assertEqual(list(display.columns), ["Hole", "Par", "Adam", "Vincent"])
+        self.assertEqual(display["Par"].tolist(), [4, 3])
 
     def test_invalid_complete_holes_reject_blank_scores(self) -> None:
         scores = pd.DataFrame(
