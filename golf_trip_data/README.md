@@ -9,11 +9,12 @@ This package hardens the v1 golf scrape into a Codex-ready input for a standalon
 - `images/`: locally stored official imagery where retrieved
 
 ## Course CSV schema
-`course,hole,hole_name,par,yards_white,yards_yellow,si,section`
+`course,hole,hole_name,par,par_white,par_yellow,yards_white,yards_yellow,si,section`
 
 Notes:
 - `hole_name` is blank where no reliable official name was found.
-- `par` is stored as a single field to match the requested schema. Where tee-specific par differs on the source site, the package preserves the single-par representation already used in the v1 package.
+- `par` is retained as the fallback par for compatibility.
+- `par_white` and `par_yellow` are optional tee-specific overrides. Where present, the app resolves hole par from the selected tee before display and scoring.
 - `section` is `OUT` for holes 1-9 and `IN` for holes 10-18.
 
 ## Metadata CSV schemas

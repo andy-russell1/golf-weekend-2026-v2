@@ -9,7 +9,7 @@ from components.layout import load_css, render_chip_row, render_connection_panel
 from domain.bonus_competitions import bonus_point_rows
 from domain.scoring import build_hole_shot_views, compute_round_results, compute_weekend_race
 from domain.weekend_config import FIXTURES, build_team_label, format_fixture_label, get_fixture, team_short_name
-from support.data_loader import data_package_exists, get_tee_rating, load_course_data
+from support.data_loader import apply_tee_par, data_package_exists, get_tee_rating, load_course_data
 from support.navigation_state import (
     set_selected_fixture_for_ui,
     sync_active_hole_from_url,
@@ -328,7 +328,7 @@ def build_results_by_fixture(store: dict[str, Any]) -> dict[str, dict[str, Any]]
     snapshot = store["persistence"]
     for fixture in FIXTURES:
         round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
-        fixture_course_df = load_course_data(fixture["course"])
+        fixture_course_df = apply_tee_par(load_course_data(fixture["course"]), round_runtime["tee_label"])
         fixture_holes = [int(hole) for hole in fixture_course_df["hole"].dropna().tolist()]
         fixture_round_state = build_round_state(
             round_id=fixture["id"],
@@ -371,7 +371,7 @@ def build_round_focus_by_fixture(
     snapshot = store["persistence"]
     for fixture in FIXTURES:
         round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
-        fixture_course_df = load_course_data(fixture["course"])
+        fixture_course_df = apply_tee_par(load_course_data(fixture["course"]), round_runtime["tee_label"])
         fixture_holes = [int(hole) for hole in fixture_course_df["hole"].dropna().tolist()]
         fixture_round_state = build_round_state(
             round_id=fixture["id"],
@@ -398,7 +398,7 @@ def build_page_context(store: dict[str, Any] | None = None) -> dict[str, Any]:
     selected_fixture = get_fixture(selected_fixture_id)
     round_runtime = get_round_runtime(store["round_rows"], selected_fixture_id)
     course = selected_fixture["course"]
-    course_df = load_course_data(course)
+    course_df = apply_tee_par(load_course_data(course), round_runtime["tee_label"])
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     sync_active_hole_from_url(selected_fixture_id, holes)
     round_state = build_round_state(

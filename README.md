@@ -57,6 +57,8 @@ Reset a round safely from `Setup / Admin` -> `Admin Actions`. Select the fixture
 
 Score a hole on mobile from `Live Scoring`. The scoring cursor resumes from the saved `scores` rows, so a browser refresh after saving hole 1 should continue at hole 2. Use the minus/plus controls beside each player to set gross scores quickly, check the live preview, then use `Save + Next` or `Save Hole`. Saved complete holes open in a protected viewing state; use `Edit saved hole` before updating workbook rows. A score save is only treated as workbook-saved after the app writes the Google Sheets rows, reads them back, and verifies the expected `round_id`, hole, `player_id`, gross score, and status values.
 
+Course data can carry tee-specific par values via optional `par_white` and `par_yellow` columns. The app resolves the active round's selected tee before live scoring, course guide scorecards, and central result calculations. This is used for Clyne holes 7 and 16, which are par 5 from the white tees and par 4 from the yellow tees.
+
 Live scoring is the quota-sensitive path. The app keeps stable workbook tabs cached and invalidates only the changed worksheet after score/result/player/round/settings saves. The live save flow still performs a fresh readback of the `scores` tab for verification, but it avoids clearing every workbook cache mid-save. If Google returns a quota error during live use, avoid repeated browser refreshes and wait for the per-minute quota window to reset before retrying.
 
 Singles pairings can be set from `Setup / Admin` -> `Round Setup` when `Singles` is selected. The pairings are saved in the existing `settings` tab under `singles_matchups_json`, so no extra worksheet or header is required.

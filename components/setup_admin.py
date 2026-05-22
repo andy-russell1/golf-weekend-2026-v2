@@ -27,7 +27,7 @@ from domain.scorecard_export import (
     build_scorecard_round_payload,
     premium_scorecard_filename,
 )
-from support.data_loader import load_course_data
+from support.data_loader import apply_tee_par, load_course_data
 from support.app_context import FORMAT_OPTIONS, TEE_OPTIONS
 from support.google_sheets import GoogleSheetsError
 from support.google_sheets import get_credentials, get_google_sheets_config, refresh_sheet_caches
@@ -115,7 +115,7 @@ def _render_bonus_competition_editor(
             )
         selected_fixture = _fixture_for_round_id(selected_round_id)
         tee_label = fixture_tees.get(selected_round_id, selected_fixture["default_tee"])
-        course_df = load_course_data(selected_fixture["course"])
+        course_df = apply_tee_par(load_course_data(selected_fixture["course"]), tee_label)
         eligible = eligible_holes(course_df, str(competition["type"]), tee_label=tee_label)
         hole_options = [int(hole) for hole in eligible["hole"].dropna().tolist()]
         if not hole_options:
@@ -160,7 +160,7 @@ def _build_export_payload_for_fixture(
     results_by_fixture: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     round_runtime = get_round_runtime(store["round_rows"], fixture["id"])
-    course_df = load_course_data(fixture["course"])
+    course_df = apply_tee_par(load_course_data(fixture["course"]), round_runtime["tee_label"])
     holes = [int(hole) for hole in course_df["hole"].dropna().tolist()]
     round_state = build_round_state(
         round_id=fixture["id"],

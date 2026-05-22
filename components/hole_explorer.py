@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_placeholder_panel, render_section_header
-from support.data_loader import get_hole_image, get_hole_record, load_course_data
+from support.data_loader import get_hole_image, get_hole_record, load_course_data, resolve_hole_par
 from domain.formatting import difficulty_label, format_hole_name, format_relative_to
 from domain.scoring import get_hole_shots_for_display
 
@@ -39,10 +39,11 @@ def render_hole_explorer(
     alternate_key = "yards_yellow" if yardage_key == "yards_white" else "yards_white"
     selected_yardage = hole_record.get(yardage_key)
     alternate_yardage = hole_record.get(alternate_key)
+    hole_par = resolve_hole_par(hole_record, selected_tee)
     difficulty, _ = difficulty_label(hole_record.get("si"))
 
     st.markdown(f"### {hole_name}")
-    render_chip_row([f"Par {hole_record.get('par', '—')}", f"SI {hole_record.get('si', '—')}", difficulty])
+    render_chip_row([f"Par {hole_par}", f"SI {hole_record.get('si', '—')}", difficulty])
     open_live_scoring = st.button("Open This Hole In Live Scoring", width="stretch")
 
     metric_columns = st.columns(2)

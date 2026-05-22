@@ -15,7 +15,7 @@ from domain.bonus_competitions import (
 )
 from domain.formatting import format_hole_name, format_relative_to
 from domain.scoring import compute_round_results, get_hole_shots_for_display
-from support.data_loader import get_hole_record
+from support.data_loader import get_hole_record, resolve_hole_par
 from support.google_sheets import GoogleSheetsError
 from support.score_status import derive_score_status
 from support.session import TEAM_A_PLAYERS, TEAM_B_PLAYERS, get_format_config
@@ -441,7 +441,7 @@ def render_live_scoring(
     hole_record = get_hole_record(course, active_hole)
     hole_name = format_hole_name(hole_record.get("hole_name"), active_hole)
     yardage_key = "yards_white" if round_runtime["tee_label"].lower() == "white" else "yards_yellow"
-    hole_par = hole_record.get("par", 4)
+    hole_par = resolve_hole_par(hole_record, round_runtime["tee_label"])
 
     current_row = round_state["scores"][round_state["scores"]["hole"] == active_hole].iloc[0]
     saved_hole_complete = str(current_row.get("status", "")) == "Complete"
@@ -452,7 +452,7 @@ def render_live_scoring(
     render_chip_row(
         [
             hole_name,
-            f"Par {hole_record.get('par', '—')}",
+            f"Par {hole_par}",
             f"SI {hole_record.get('si', '—')}",
             f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
         ]
@@ -690,7 +690,7 @@ def render_live_scoring(
         render_chip_row(
             [
                 course_title,
-                f"Par {hole_record.get('par', '—')}",
+                f"Par {hole_par}",
                 f"SI {hole_record.get('si', '—')}",
                 f"{round_runtime['tee_label']} {hole_record.get(yardage_key, '—')}y",
             ]

@@ -1,19 +1,19 @@
-course,hole,hole_name,par,yards_white,yards_yellow,si,section
-clyne,1,Y Twyn,4,340,326,11,OUT
-clyne,2,Trig Point,4,339,326,7,OUT
-clyne,3,Clyne Wood,5,499,490,3,OUT
-clyne,4,Keeper’s Cottage,3,158,154,13,OUT
-clyne,5,Road Hole,4,335,292,17,OUT
-clyne,6,Penrice,4,405,361,5,OUT
-clyne,7,Ffordd Hir,5,480,386,1,OUT
-clyne,8,Fern Fall,3,202,184,15,OUT
-clyne,9,Gwelfor,4,475,448,9,OUT
-clyne,10,Owl’s Lodge,4,415,391,10,IN
-clyne,11,The Spire,4,413,383,4,IN
-clyne,12,Bant a Hi,3,163,152,18,IN
-clyne,13,The Gulley,4,348,341,8,IN
-clyne,14,The Kidney,5,504,492,2,IN
-clyne,15,Kestrel Way,4,308,273,14,IN
-clyne,16,Mumbles Head,5,520,458,6,IN
-clyne,17,Quarry,3,154,144,16,IN
-clyne,18,Pen Y Dalar,4,374,342,12,IN
+course,hole,hole_name,par,par_white,par_yellow,yards_white,yards_yellow,si,section
+clyne,1,Y Twyn,4,4,4,340,326,11,OUT
+clyne,2,Trig Point,4,4,4,339,326,7,OUT
+clyne,3,Clyne Wood,5,5,5,499,490,3,OUT
+clyne,4,Keeper’s Cottage,3,3,3,158,154,13,OUT
+clyne,5,Road Hole,4,4,4,335,292,17,OUT
+clyne,6,Penrice,4,4,4,405,361,5,OUT
+clyne,7,Ffordd Hir,5,5,4,480,386,1,OUT
+clyne,8,Fern Fall,3,3,3,202,184,15,OUT
+clyne,9,Gwelfor,4,4,4,475,448,9,OUT
+clyne,10,Owl’s Lodge,4,4,4,415,391,10,IN
+clyne,11,The Spire,4,4,4,413,383,4,IN
+clyne,12,Bant a Hi,3,3,3,163,152,18,IN
+clyne,13,The Gulley,4,4,4,348,341,8,IN
+clyne,14,The Kidney,5,5,5,504,492,2,IN
+clyne,15,Kestrel Way,4,4,4,308,273,14,IN
+clyne,16,Mumbles Head,5,5,4,520,458,6,IN
+clyne,17,Quarry,3,3,3,154,144,16,IN
+clyne,18,Pen Y Dalar,4,4,4,374,342,12,IN

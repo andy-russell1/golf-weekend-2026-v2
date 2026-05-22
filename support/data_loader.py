@@ -15,6 +15,8 @@ COURSE_COLUMNS = (
     "hole",
     "hole_name",
     "par",
+    "par_white",
+    "par_yellow",
     "yards_white",
     "yards_yellow",
     "si",
@@ -101,6 +103,8 @@ def _coerce_schema(df: pd.DataFrame, required_columns: tuple[str, ...]) -> pd.Da
 
     numeric_columns = {
         "par",
+        "par_white",
+        "par_yellow",
         "yards_white",
         "yards_yellow",
         "si",
@@ -147,6 +151,41 @@ def load_course_data(course: str) -> pd.DataFrame:
     return df[df["course"] == course].sort_values("hole").reset_index(drop=True)
 
 
+def tee_par_column(tee: str) -> str:
+    if str(tee).casefold() == "white":
+        return "par_white"
+    if str(tee).casefold() == "yellow":
+        return "par_yellow"
+    return ""
+
+
+def apply_tee_par(course_df: pd.DataFrame, tee: str) -> pd.DataFrame:
+    if course_df.empty:
+        return course_df.copy()
+
+    frame = course_df.copy()
+    tee_column = tee_par_column(tee)
+    if not tee_column or tee_column not in frame.columns:
+        return frame
+
+    fallback_par = pd.to_numeric(frame.get("par"), errors="coerce").astype("Int64")
+    tee_par = pd.to_numeric(frame[tee_column], errors="coerce").astype("Int64")
+    frame["par"] = tee_par.combine_first(fallback_par).astype("Int64")
+    return frame
+
+
+def resolve_hole_par(hole_record: dict[str, Any], tee: str) -> Any:
+    tee_column = tee_par_column(tee)
+    if tee_column:
+        tee_value = hole_record.get(tee_column)
+        try:
+            if pd.notna(tee_value):
+                return tee_value
+        except (TypeError, ValueError):
+            pass
+    return hole_record.get("par", "—")
+
+
 @st.cache_data(show_spinner=False)
 def load_hole_enrichment(course: str) -> pd.DataFrame:
     df = _read_csv(str(METADATA_ROOT / "hole_enrichment.csv"), HOLE_ENRICHMENT_COLUMNS)
@@ -191,14 +230,14 @@ def load_data_gaps(course: str) -> pd.DataFrame:
     return df[df["course"] == course].sort_values(["hole", "field"]).reset_index(drop=True)
 
 
-def get_course_summary_record(course: str) -> dict[str, Any]:
+def get_course_summary_record(course: str, tee: str | None = None) -> dict[str, Any]:
     summary = load_course_summary(course)
-    if not summary.empty:
+    if tee is None and not summary.empty:
         return summary.iloc[0].to_dict()
 
-    course_df = load_course_data(course)
+    course_df = apply_tee_par(load_course_data(course), tee) if tee else load_course_data(course)
     if course_df.empty:
-        return {}
+        return summary.iloc[0].to_dict() if not summary.empty else {}
 
     out_mask = course_df["section"].fillna("").astype(str).str.upper().eq("OUT")
     in_mask = course_df["section"].fillna("").astype(str).str.upper().eq("IN")

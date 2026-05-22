@@ -126,6 +126,8 @@ clyne,6,si,5,https://www.clynegolfclub.com/course/,official_course_page,Official
 clyne,6,hole_name,Penrice,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,6,pro_tip,A drive in the heart of the fairway leaves the ideal angle; the front-to-back green makes club selection critical.,https://www.clynegolfclub.com/course/hole-by-hole-tour/,official_hole_tour,Official hole-by-hole tour text.
 clyne,7,par,5,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
+clyne,7,par_white,5,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; tee-specific par retained because yellow differs from white.
+clyne,7,par_yellow,4,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; tee-specific par retained because yellow differs from white.
 clyne,7,yards_white,480,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,7,yards_yellow,386,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,7,si,1,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
@@ -180,6 +182,8 @@ clyne,15,si,14,https://www.clynegolfclub.com/course/,official_course_page,Offici
 clyne,15,hole_name,Kestrel Way,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,15,pro_tip,"Keep the tee shot well left of the fairway bunkers; the short, blind approach still needs full concentration.",https://www.clynegolfclub.com/course/hole-by-hole-tour/,official_hole_tour,Official hole-by-hole tour text.
 clyne,16,par,5,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
+clyne,16,par_white,5,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; tee-specific par retained because yellow differs from white.
+clyne,16,par_yellow,4,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; tee-specific par retained because yellow differs from white.
 clyne,16,yards_white,520,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,16,yards_yellow,458,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.
 clyne,16,si,6,https://www.clynegolfclub.com/course/,official_course_page,Official Clyne scorecard table; par stored as single field aligned to package schema.

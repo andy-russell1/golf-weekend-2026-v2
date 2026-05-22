@@ -5,7 +5,7 @@ from typing import Any
 import streamlit as st
 
 from components.layout import render_chip_row, render_metric_card, render_section_header, render_status_card
-from support.data_loader import get_course_summary_record, load_course_data
+from support.data_loader import apply_tee_par, get_course_summary_record, load_course_data
 from domain.formatting import format_handicap_index
 from domain.handicap import build_player_handicap_table
 
@@ -16,8 +16,8 @@ def render_course_briefing(
     tee_label: str,
     format_name: str,
 ) -> None:
-    course_df = load_course_data(course)
-    summary = get_course_summary_record(course)
+    course_df = apply_tee_par(load_course_data(course), tee_label)
+    summary = get_course_summary_record(course, tee_label)
 
     render_section_header(
         "Course Guide",
@@ -91,7 +91,7 @@ def render_playing_handicap_summary(
 
 
 def render_course_scorecard(course: str, tee_label: str) -> None:
-    course_df = load_course_data(course)
+    course_df = apply_tee_par(load_course_data(course), tee_label)
     if course_df.empty:
         st.warning("No course data is available for this selection.")
         return
